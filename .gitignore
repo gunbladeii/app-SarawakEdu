@@ -1,0 +1,7 @@
+.vercel/
+node_modules/
+.env
+.env.*
+*.log
+Thumbs.db
+desktop.ini

@@ -1,0 +1,19 @@
+{
+  "name": "SPM Watch Serian",
+  "short_name": "SPM Watch",
+  "description": "Pemantauan prestasi SPM Serian dengan pengesanan awal risiko dan intervensi.",
+  "start_url": "./index.html",
+  "scope": "./",
+  "display": "standalone",
+  "orientation": "any",
+  "background_color": "#f5f7fa",
+  "theme_color": "#0f172a",
+  "icons": [
+    {
+      "src": "icon.svg",
+      "sizes": "any",
+      "type": "image/svg+xml",
+      "purpose": "any maskable"
+    }
+  ]
+}

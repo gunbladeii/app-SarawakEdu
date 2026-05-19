@@ -1,0 +1,209 @@
+<!doctype html>
+<html lang="ms">
+  <head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <meta name="theme-color" content="#0f172a">
+    <meta name="description" content="Dashboard pemantauan prestasi SPM Serian dengan pengesanan awal risiko dan intervensi.">
+    <title>Pemantauan SPM Serian</title>
+    <link rel="manifest" href="manifest.webmanifest">
+    <link rel="icon" href="icon.svg" type="image/svg+xml">
+    <link rel="stylesheet" href="styles.css?v=2">
+  </head>
+  <body>
+    <div class="app-shell">
+      <aside class="sidebar" aria-label="Navigasi utama">
+        <div class="brand">
+          <div class="brand-mark" aria-hidden="true">S</div>
+          <div>
+            <p class="eyebrow">Daerah Serian</p>
+            <h1>SPM Watch</h1>
+          </div>
+        </div>
+
+        <nav class="nav-list">
+          <a href="#ringkasan" class="active">Ringkasan</a>
+          <a href="#sekolah">Sekolah</a>
+          <a href="#murid">Murid Risiko</a>
+          <a href="#intervensi">Intervensi</a>
+          <a href="#mobile">Mobile & QR</a>
+        </nav>
+
+        <section class="legend" aria-labelledby="legend-title">
+          <h2 id="legend-title">Kod Risiko</h2>
+          <p><span class="dot red"></span> Merah: tindakan segera</p>
+          <p><span class="dot amber"></span> Kuning: pantau rapat</p>
+          <p><span class="dot green"></span> Hijau: atas landasan</p>
+        </section>
+      </aside>
+
+      <main>
+        <header class="topbar">
+          <div>
+            <p class="eyebrow">Sistem pengesanan awal risiko cicir</p>
+            <h2>Pemantauan prestasi SPM secara real time</h2>
+          </div>
+          <div class="top-actions">
+            <span id="dataSourceStatus" class="status-chip">Data lokal</span>
+            <label class="search-field">
+              <span>Cari</span>
+              <input id="searchInput" type="search" placeholder="Sekolah atau murid">
+            </label>
+            <select id="riskFilter" aria-label="Tapis risiko">
+              <option value="all">Semua risiko</option>
+              <option value="red">Merah</option>
+              <option value="amber">Kuning</option>
+              <option value="green">Hijau</option>
+            </select>
+          </div>
+        </header>
+
+        <section id="ringkasan" class="summary-grid" aria-label="Ringkasan daerah">
+          <article class="metric">
+            <span>Calon SPM</span>
+            <strong id="totalCandidates">0</strong>
+            <small>9 sekolah menengah</small>
+          </article>
+          <article class="metric">
+            <span>Risiko Merah</span>
+            <strong id="redCount">0</strong>
+            <small>Perlu intervensi segera</small>
+          </article>
+          <article class="metric">
+            <span>Lulus Ramalan</span>
+            <strong id="passForecast">0%</strong>
+            <small>Berdasarkan trend semasa</small>
+          </article>
+          <article class="metric">
+            <span>Kehadiran</span>
+            <strong id="attendanceAvg">0%</strong>
+            <small>Purata 30 hari</small>
+          </article>
+        </section>
+
+        <section class="work-grid">
+          <section id="sekolah" class="panel wide" aria-labelledby="schools-title">
+            <div class="panel-head">
+              <div>
+                <p class="eyebrow">Papan pemuka sekolah</p>
+                <h3 id="schools-title">Status 9 SM Daerah Serian</h3>
+              </div>
+              <div class="segmented" role="group" aria-label="Paparan">
+                <button class="active" type="button">Prestasi</button>
+                <button type="button">Kehadiran</button>
+                <button type="button">Subjek Kritikal</button>
+              </div>
+            </div>
+            <div id="schoolGrid" class="school-grid"></div>
+          </section>
+
+          <section class="panel" aria-labelledby="drivers-title">
+            <div class="panel-head compact">
+              <div>
+                <p class="eyebrow">Punca risiko</p>
+                <h3 id="drivers-title">Isyarat utama</h3>
+              </div>
+            </div>
+            <div id="driverList" class="driver-list"></div>
+          </section>
+        </section>
+
+        <section class="work-grid bottom-grid">
+          <section id="murid" class="panel wide" aria-labelledby="students-title">
+            <div class="panel-head">
+              <div>
+                <p class="eyebrow">Senarai tindakan</p>
+                <h3 id="students-title">Murid berisiko cicir/gagal</h3>
+              </div>
+              <button id="exportBtn" class="primary-action" type="button">Jana ringkasan</button>
+            </div>
+            <div class="table-wrap">
+              <table>
+                <thead>
+                  <tr>
+                    <th>Murid</th>
+                    <th>Sekolah</th>
+                    <th>Risiko</th>
+                    <th>Isu utama</th>
+                    <th>Intervensi</th>
+                  </tr>
+                </thead>
+                <tbody id="studentTable"></tbody>
+              </table>
+            </div>
+          </section>
+
+          <section id="intervensi" class="panel" aria-labelledby="intervention-title">
+            <div class="panel-head compact">
+              <div>
+                <p class="eyebrow">Libat urus</p>
+                <h3 id="intervention-title">Jaringan intervensi</h3>
+              </div>
+            </div>
+            <div id="interventionStack" class="intervention-stack"></div>
+          </section>
+        </section>
+
+        <section id="mobile" class="work-grid bottom-grid">
+          <section class="panel wide" aria-labelledby="mobile-title">
+            <div class="panel-head">
+              <div>
+                <p class="eyebrow">Universal app</p>
+                <h3 id="mobile-title">Sedia untuk laptop, desktop dan mobile</h3>
+              </div>
+              <span id="pwaStatus" class="status-chip">Menyemak</span>
+            </div>
+            <div class="device-grid">
+              <div class="device-item">
+                <strong>Responsive dashboard</strong>
+                <span>Susun atur berubah mengikut saiz skrin tanpa install app berasingan.</span>
+              </div>
+              <div class="device-item">
+                <strong>PWA-ready</strong>
+                <span>Boleh dipasang ke home screen apabila dibuka melalui HTTPS atau localhost.</span>
+              </div>
+              <div class="device-item">
+                <strong>Camera permission</strong>
+                <span>Modul kamera sudah tersedia untuk imbas QR kehadiran atau semakan murid.</span>
+              </div>
+            </div>
+          </section>
+
+          <section class="panel scanner-panel" aria-labelledby="scanner-title">
+            <div class="panel-head compact">
+              <div>
+                <p class="eyebrow">Add-on QR</p>
+                <h3 id="scanner-title">Imbas QR</h3>
+              </div>
+            </div>
+            <div class="camera-shell">
+              <video id="cameraPreview" playsinline muted></video>
+              <div id="cameraPlaceholder" class="camera-placeholder">
+                <strong>Kamera belum dibuka</strong>
+                <span>Tekan butang kamera untuk beri permission.</span>
+              </div>
+            </div>
+            <div class="scanner-actions">
+              <button id="cameraCheckBtn" class="secondary-action" type="button">Semak support</button>
+              <button id="cameraStartBtn" class="primary-action" type="button">Buka kamera</button>
+              <button id="cameraStopBtn" class="secondary-action" type="button" disabled>Tutup</button>
+            </div>
+            <p id="cameraStatus" class="camera-status">Status kamera belum disemak.</p>
+            <div id="qrResult" class="qr-result" hidden></div>
+          </section>
+        </section>
+      </main>
+    </div>
+
+    <dialog id="summaryDialog">
+      <div class="dialog-head">
+        <h3>Ringkasan tindakan daerah</h3>
+        <button id="closeDialog" type="button" aria-label="Tutup">x</button>
+      </div>
+      <pre id="summaryText"></pre>
+    </dialog>
+
+    <script src="config.js?v=2"></script>
+    <script src="app.js?v=4"></script>
+  </body>
+</html>
