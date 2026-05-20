@@ -71,4 +71,5 @@ Dokumen ini menjadi rangka kerja sebelum dummy data dashboard diganti dengan rek
 2. Jalankan `supabase-real-data-bootstrap.sql` untuk tambah PPD Admin pertama dan kitaran aktif.
 3. Jalankan `supabase-real-data-check.sql` untuk semak table, admin dan kitaran aktif.
 4. Guna template `templates/student-monitoring-template.csv` untuk ujian import.
-5. Selepas data sebenar stabil, frontend boleh ditukar daripada table dummy kepada view `dashboard_real_school_metrics` dan `dashboard_real_student_risks`.
+5. Buka menu `Kemasukan Data` dalam aplikasi untuk pilih sekolah, semak calon SPM, muat naik CSV dan simpan rekod.
+6. Selepas data sebenar stabil, frontend boleh ditukar daripada table dummy kepada view `dashboard_real_school_metrics` dan `dashboard_real_student_risks`.

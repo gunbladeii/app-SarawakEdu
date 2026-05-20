@@ -44,6 +44,10 @@ let scanFrameId = null;
 let qrDetector = null;
 let supabaseClient = null;
 let activeSession = null;
+let referenceSchools = [];
+let referenceStudents = [];
+let importPreviewRows = [];
+let lastImportFileName = "";
 
 const dataSourceMessages = {
   local: "Data contoh",
@@ -154,6 +158,454 @@ async function fetchSupabaseRows(path, config) {
   }
 
   return response.json();
+}
+
+async function supabaseRequest(path, options = {}) {
+  const config = getSupabaseConfig();
+  const accessToken = getSupabaseAccessToken(config);
+
+  if (!hasSupabaseConfig(config) || !activeSession) {
+    throw new Error("Sila masuk Google dahulu.");
+  }
+
+  const response = await fetch(`${config.supabaseUrl}/rest/v1/${path}`, {
+    ...options,
+    headers: {
+      apikey: config.supabaseAnonKey,
+      authorization: `Bearer ${accessToken}`,
+      accept: "application/json",
+      "content-type": "application/json",
+      ...(options.headers || {})
+    }
+  });
+
+  const text = await response.text();
+  const body = text ? JSON.parse(text) : null;
+
+  if (!response.ok) {
+    throw new Error(body?.message || body?.hint || `Supabase ${response.status}`);
+  }
+
+  return body;
+}
+
+async function fetchReferenceData(scope, params = {}) {
+  if (!activeSession?.access_token) {
+    throw new Error("Sila masuk Google dahulu.");
+  }
+
+  const url = new URL("/api/oracle-reference", window.location.origin);
+  url.searchParams.set("scope", scope);
+  for (const [key, value] of Object.entries(params)) {
+    if (value !== undefined && value !== null && value !== "") {
+      url.searchParams.set(key, value);
+    }
+  }
+
+  const response = await fetch(url, {
+    headers: {
+      accept: "application/json",
+      authorization: `Bearer ${activeSession.access_token}`
+    }
+  });
+  const payload = await response.json();
+
+  if (!response.ok || payload.success === false) {
+    throw new Error(payload.message || "Data rujukan tidak dapat dibaca.");
+  }
+
+  return payload;
+}
+
+function setEntryStatus(message) {
+  const element = document.querySelector("#entryStatus");
+  if (element) element.textContent = message;
+}
+
+function setCandidateSummary(message) {
+  const element = document.querySelector("#candidateSummary");
+  if (element) element.textContent = message;
+}
+
+function setImportSummary(message) {
+  const element = document.querySelector("#importSummary");
+  if (element) element.textContent = message;
+}
+
+function getShortSchoolName(name) {
+  return String(name || "")
+    .replace(/^SEKOLAH MENENGAH KEBANGSAAN\s+/i, "SMK ")
+    .replace(/^SMK\s+SMK\s+/i, "SMK ")
+    .trim();
+}
+
+function populateEntrySchoolSelect() {
+  const select = document.querySelector("#entrySchoolSelect");
+  if (!select) return;
+
+  const currentValue = select.value;
+  select.innerHTML = `<option value="">Pilih sekolah</option>${referenceSchools
+    .map((school) => `<option value="${school.code}">${getShortSchoolName(school.name)} (${school.code})</option>`)
+    .join("")}`;
+
+  if (referenceSchools.some((school) => school.code === currentValue)) {
+    select.value = currentValue;
+  }
+}
+
+async function loadEntrySchools() {
+  if (!activeSession) {
+    referenceSchools = [];
+    populateEntrySchoolSelect();
+    setEntryStatus("Sila masuk Google untuk mengurus kemasukan data.");
+    return;
+  }
+
+  try {
+    const result = await fetchReferenceData("schools");
+    referenceSchools = result.data || [];
+    populateEntrySchoolSelect();
+    setEntryStatus(`${referenceSchools.length} sekolah rujukan sedia untuk kemasukan data.`);
+  } catch (error) {
+    referenceSchools = [];
+    populateEntrySchoolSelect();
+    setEntryStatus(error.message);
+  }
+}
+
+async function loadEntryCandidates() {
+  const schoolCode = document.querySelector("#entrySchoolSelect")?.value || "";
+
+  if (!schoolCode) {
+    setCandidateSummary("Pilih sekolah dahulu.");
+    return;
+  }
+
+  setCandidateSummary("Sedang menyemak calon SPM...");
+
+  try {
+    const result = await fetchReferenceData("students", {
+      kod_sekolah: schoolCode,
+      spm_only: "1",
+      limit: "1000"
+    });
+    referenceStudents = result.data || [];
+    const school = referenceSchools.find((item) => item.code === schoolCode);
+    setCandidateSummary(`${referenceStudents.length.toLocaleString("ms-MY")} calon Tingkatan 5 ditemui untuk ${getShortSchoolName(school?.name || schoolCode)}.`);
+    renderImportPreview();
+  } catch (error) {
+    referenceStudents = [];
+    setCandidateSummary(error.message);
+  }
+}
+
+function parseCsv(text) {
+  const rows = [];
+  let row = [];
+  let field = "";
+  let insideQuotes = false;
+
+  for (let index = 0; index < text.length; index += 1) {
+    const char = text[index];
+    const next = text[index + 1];
+
+    if (char === '"' && insideQuotes && next === '"') {
+      field += '"';
+      index += 1;
+      continue;
+    }
+
+    if (char === '"') {
+      insideQuotes = !insideQuotes;
+      continue;
+    }
+
+    if (char === "," && !insideQuotes) {
+      row.push(field);
+      field = "";
+      continue;
+    }
+
+    if ((char === "\n" || char === "\r") && !insideQuotes) {
+      if (char === "\r" && next === "\n") index += 1;
+      row.push(field);
+      if (row.some((value) => value.trim() !== "")) rows.push(row);
+      row = [];
+      field = "";
+      continue;
+    }
+
+    field += char;
+  }
+
+  row.push(field);
+  if (row.some((value) => value.trim() !== "")) rows.push(row);
+
+  if (!rows.length) return [];
+
+  const headers = rows[0].map((header) => header.trim());
+  return rows.slice(1).map((values) =>
+    headers.reduce((record, header, index) => {
+      record[header] = (values[index] || "").trim();
+      return record;
+    }, {})
+  );
+}
+
+function parseBoolean(value) {
+  const normalized = String(value || "").trim().toLowerCase();
+  if (["true", "1", "ya", "y", "lulus", "pass"].includes(normalized)) return true;
+  if (["false", "0", "tidak", "n", "gagal", "fail"].includes(normalized)) return false;
+  return null;
+}
+
+function parseNumber(value) {
+  if (value === undefined || value === null || String(value).trim() === "") return null;
+  const parsed = Number(String(value).replace("%", "").trim());
+  return Number.isFinite(parsed) ? parsed : null;
+}
+
+function normalizeRiskValue(value) {
+  const normalized = String(value || "").trim().toLowerCase();
+  if (["red", "merah"].includes(normalized)) return "red";
+  if (["amber", "kuning", "yellow"].includes(normalized)) return "amber";
+  if (["green", "hijau"].includes(normalized)) return "green";
+  return "";
+}
+
+function getFocusArea(row) {
+  if (row.bmPass === false || row.sejarahPass === false) return "LMS";
+  if (row.gpsQualityNeed) return "GPS Kualiti";
+  if (row.gpsQuantityNeed) return "GPS Kuantiti";
+  if (row.attendanceRate !== null && row.attendanceRate < 90) return "Kehadiran";
+  return "Lain-lain";
+}
+
+function normalizeImportRow(raw, index) {
+  const selectedSchool = document.querySelector("#entrySchoolSelect")?.value || "";
+  const studentCode = String(raw.student_code || "").trim();
+  const schoolCode = String(raw.school_code || selectedSchool || "").trim().toUpperCase();
+  const candidateCodes = new Set(referenceStudents.map((student) => String(student.studentCode)));
+  const messages = [];
+  const warnings = [];
+  const risk = normalizeRiskValue(raw.risk) || "green";
+  const bmPass = parseBoolean(raw.bm_pass);
+  const sejarahPass = parseBoolean(raw.sejarah_pass);
+  const gpsQualityNeed = parseBoolean(raw.gps_quality_need) === true;
+  const gpsQuantityNeed = parseBoolean(raw.gps_quantity_need) === true;
+
+  if (!raw.cycle_code) messages.push("cycle_code kosong");
+  if (!studentCode) messages.push("student_code kosong");
+  if (!schoolCode) messages.push("school_code kosong");
+  if (selectedSchool && schoolCode !== selectedSchool) messages.push("school_code tidak sama dengan pilihan sekolah");
+  if (referenceStudents.length && studentCode && !candidateCodes.has(studentCode)) warnings.push("murid belum ditemui dalam semakan calon");
+
+  const normalized = {
+    rowNumber: index + 2,
+    cycleCode: String(raw.cycle_code || "").trim(),
+    schoolCode,
+    studentCode,
+    classId: String(raw.class_id || "").trim() || null,
+    className: String(raw.class_name || "").trim() || null,
+    formCode: String(raw.form_code || "15").trim() || "15",
+    attendanceRate: parseNumber(raw.attendance_rate),
+    bmScore: parseNumber(raw.bm_score),
+    bmGrade: String(raw.bm_grade || "").trim() || null,
+    bmPass,
+    sejarahScore: parseNumber(raw.sejarah_score),
+    sejarahGrade: String(raw.sejarah_grade || "").trim() || null,
+    sejarahPass,
+    currentGpa: parseNumber(raw.current_gpa),
+    targetGpa: parseNumber(raw.target_gpa),
+    criticalSubject: String(raw.critical_subject || "").trim() || null,
+    gpsQualityNeed,
+    gpsQuantityNeed,
+    risk,
+    issueNote: String(raw.issue_note || "").trim() || null,
+    interventionAction: String(raw.intervention_action || "").trim(),
+    interventionOwner: String(raw.intervention_owner || "").trim() || null,
+    dueDate: String(raw.due_date || "").trim() || null,
+    valid: messages.length === 0,
+    warning: warnings.length > 0,
+    messages: [...messages, ...warnings]
+  };
+
+  return normalized;
+}
+
+function updatePreviewStats() {
+  const accepted = importPreviewRows.filter((row) => row.valid).length;
+  const rejected = importPreviewRows.length - accepted;
+  document.querySelector("#previewTotal").textContent = importPreviewRows.length.toLocaleString("ms-MY");
+  document.querySelector("#previewAccepted").textContent = accepted.toLocaleString("ms-MY");
+  document.querySelector("#previewRejected").textContent = rejected.toLocaleString("ms-MY");
+  document.querySelector("#saveImportBtn").disabled = accepted === 0;
+}
+
+function renderImportPreview() {
+  const table = document.querySelector("#importPreviewTable");
+  if (!table) return;
+
+  updatePreviewStats();
+
+  if (!importPreviewRows.length) {
+    table.innerHTML = `<tr><td colspan="8">Preview data akan dipaparkan selepas fail CSV dipilih.</td></tr>`;
+    return;
+  }
+
+  table.innerHTML = importPreviewRows.slice(0, 30).map((row) => {
+    const statusClass = row.valid ? (row.warning ? "warning" : "ready") : "error";
+    const statusText = row.valid ? (row.warning ? "Semak" : "Sedia") : "Ralat";
+    return `
+      <tr>
+        <td><span class="preview-status ${statusClass}">${statusText}</span></td>
+        <td><strong>${row.studentCode || "-"}</strong></td>
+        <td>${row.schoolCode || "-"}</td>
+        <td>${row.className || row.classId || "-"}</td>
+        <td>${row.bmPass === null ? "-" : row.bmPass ? "Lulus" : "Belum lulus"}</td>
+        <td>${row.sejarahPass === null ? "-" : row.sejarahPass ? "Lulus" : "Belum lulus"}</td>
+        <td>${riskLabel[row.risk] || row.risk}</td>
+        <td>${row.messages.join(", ") || row.issueNote || "-"}</td>
+      </tr>
+    `;
+  }).join("");
+}
+
+async function handleCsvFileChange(event) {
+  const file = event.target.files?.[0];
+  importPreviewRows = [];
+  lastImportFileName = file?.name || "";
+
+  if (!file) {
+    renderImportPreview();
+    setImportSummary("Muat naik fail CSV mengikut template sebelum simpan ke rekod sebenar.");
+    return;
+  }
+
+  const text = await file.text();
+  const rows = parseCsv(text);
+  importPreviewRows = rows.map((row, index) => normalizeImportRow(row, index));
+  renderImportPreview();
+  const ready = importPreviewRows.filter((row) => row.valid).length;
+  setImportSummary(`${file.name}: ${ready} daripada ${importPreviewRows.length} baris sedia disimpan.`);
+}
+
+async function resolveCycleId(cycleCode) {
+  const encoded = encodeURIComponent(cycleCode);
+  const rows = await supabaseRequest(`assessment_cycles?select=id,code&code=eq.${encoded}&limit=1`);
+  if (!rows?.length) {
+    throw new Error(`Kitaran ${cycleCode} belum wujud.`);
+  }
+  return rows[0].id;
+}
+
+async function saveImportRows() {
+  const validRows = importPreviewRows.filter((row) => row.valid);
+  if (!validRows.length) {
+    setEntryStatus("Tiada baris yang sedia disimpan.");
+    return;
+  }
+
+  const selectedSchool = document.querySelector("#entrySchoolSelect")?.value || validRows[0].schoolCode;
+  const cycleCode = validRows[0].cycleCode;
+  const mixedCycle = validRows.some((row) => row.cycleCode !== cycleCode);
+  const mixedSchool = validRows.some((row) => row.schoolCode !== selectedSchool);
+
+  if (mixedCycle) {
+    setEntryStatus("Satu fail hanya boleh mengandungi satu kitaran pemantauan.");
+    return;
+  }
+
+  if (mixedSchool) {
+    setEntryStatus("Satu fail hanya boleh mengandungi satu sekolah.");
+    return;
+  }
+
+  document.querySelector("#saveImportBtn").disabled = true;
+  setEntryStatus("Sedang menyimpan rekod...");
+
+  try {
+    const cycleId = await resolveCycleId(cycleCode);
+    const batchRows = await supabaseRequest("data_import_batches?select=id", {
+      method: "POST",
+      headers: { Prefer: "return=representation" },
+      body: JSON.stringify({
+        cycle_id: cycleId,
+        school_code: selectedSchool,
+        source_type: "excel",
+        file_name: lastImportFileName || "upload.csv",
+        row_count: importPreviewRows.length,
+        accepted_count: validRows.length,
+        rejected_count: importPreviewRows.length - validRows.length,
+        status: "validated",
+        notes: {
+          uploadedFrom: "Kemasukan Data",
+          warningCount: validRows.filter((row) => row.warning).length
+        }
+      })
+    });
+    const batchId = batchRows?.[0]?.id || null;
+
+    const monitoringPayload = validRows.map((row) => ({
+      cycle_id: cycleId,
+      import_batch_id: batchId,
+      school_code: row.schoolCode,
+      student_code: row.studentCode,
+      class_id: row.classId,
+      class_name: row.className,
+      form_code: row.formCode,
+      attendance_rate: row.attendanceRate,
+      bm_score: row.bmScore,
+      bm_grade: row.bmGrade,
+      bm_pass: row.bmPass,
+      sejarah_score: row.sejarahScore,
+      sejarah_grade: row.sejarahGrade,
+      sejarah_pass: row.sejarahPass,
+      current_gpa: row.currentGpa,
+      target_gpa: row.targetGpa,
+      critical_subject: row.criticalSubject,
+      gps_quality_need: row.gpsQualityNeed,
+      gps_quantity_need: row.gpsQuantityNeed,
+      risk: row.risk,
+      issue_note: row.issueNote
+    }));
+
+    await supabaseRequest("student_monitoring_records?on_conflict=cycle_id,student_code", {
+      method: "POST",
+      headers: { Prefer: "resolution=merge-duplicates" },
+      body: JSON.stringify(monitoringPayload)
+    });
+
+    const interventionsPayload = validRows
+      .filter((row) => row.interventionAction)
+      .map((row) => ({
+        cycle_id: cycleId,
+        school_code: row.schoolCode,
+        student_code: row.studentCode,
+        focus_area: getFocusArea(row),
+        risk: row.risk,
+        issue: row.issueNote || "Perlu tindakan susulan",
+        action: row.interventionAction,
+        owner_name: row.interventionOwner,
+        due_date: row.dueDate,
+        status: "open"
+      }));
+
+    if (interventionsPayload.length) {
+      await supabaseRequest("student_intervention_records", {
+        method: "POST",
+        headers: { Prefer: "return=minimal" },
+        body: JSON.stringify(interventionsPayload)
+      });
+    }
+
+    setEntryStatus(`${validRows.length.toLocaleString("ms-MY")} rekod berjaya disimpan untuk ${cycleCode}.`);
+    setImportSummary("Rekod telah disimpan. Dashboard real-data boleh dibaca selepas paparan dipindahkan kepada view baharu.");
+  } catch (error) {
+    setEntryStatus(error.message || "Rekod tidak berjaya disimpan.");
+  } finally {
+    updatePreviewStats();
+  }
 }
 
 function mapSchoolRow(row) {
@@ -423,7 +875,7 @@ async function initAuth() {
   client.auth.onAuthStateChange((_event, session) => {
     activeSession = session;
     updateAuthUi(session);
-    loadDashboardData().then(renderAll);
+    Promise.all([loadDashboardData(), loadEntrySchools()]).then(renderAll);
   });
 }
 
@@ -861,12 +1313,16 @@ document.querySelector("#cameraStopBtn").addEventListener("click", stopCamera);
 document.querySelector("#sidebarLoginBtn").addEventListener("click", signInWithGoogle);
 document.querySelector("#googleLoginHeroBtn").addEventListener("click", signInWithGoogle);
 document.querySelector("#logoutBtn").addEventListener("click", signOut);
+document.querySelector("#loadCandidatesBtn").addEventListener("click", loadEntryCandidates);
+document.querySelector("#csvFileInput").addEventListener("change", handleCsvFileChange);
+document.querySelector("#saveImportBtn").addEventListener("click", saveImportRows);
 
 async function initApp() {
   setTodayLabel();
   renderIcons();
   await initAuth();
   await loadDashboardData();
+  await loadEntrySchools();
   renderAll();
   initPwaStatus();
   checkCameraSupport();

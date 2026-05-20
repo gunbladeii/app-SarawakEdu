@@ -8,7 +8,7 @@
     <title>MySPMCare Serian</title>
     <link rel="manifest" href="manifest.webmanifest">
     <link rel="icon" href="icon.svg" type="image/svg+xml">
-    <link rel="stylesheet" href="styles.css?v=11">
+    <link rel="stylesheet" href="styles.css?v=12">
   </head>
   <body>
     <div class="app-shell">
@@ -41,6 +41,7 @@
           <a href="#carta"><span class="nav-icon" data-lucide="chart-no-axes-combined"></span><span>Carta</span></a>
           <a href="#murid"><span class="nav-icon" data-lucide="user-x"></span><span>Murid Berisiko</span></a>
           <a href="#intervensi"><span class="nav-icon" data-lucide="handshake"></span><span>Intervensi</span></a>
+          <a href="#data-entry"><span class="nav-icon" data-lucide="file-up"></span><span>Kemasukan Data</span></a>
           <a href="#mobile"><span class="nav-icon" data-lucide="qr-code"></span><span>Aplikasi & QR</span></a>
         </nav>
 
@@ -84,6 +85,63 @@
             <p id="authGateText">Maklumat ini dilindungi. Sila masuk menggunakan akaun Google yang dibenarkan.</p>
           </div>
           <button id="googleLoginHeroBtn" class="primary-action" type="button">Masuk dengan Google</button>
+        </section>
+
+        <section id="data-entry" class="panel data-entry-panel" aria-labelledby="data-entry-title">
+          <div class="panel-head">
+            <div>
+              <p class="eyebrow">Rekod sebenar</p>
+              <h3 id="data-entry-title">Kemasukan data sekolah</h3>
+            </div>
+            <a class="secondary-action template-link" href="templates/student-monitoring-template.csv" download>Muat turun template</a>
+          </div>
+
+          <div class="entry-grid">
+            <div class="entry-card">
+              <label for="entrySchoolSelect">Sekolah</label>
+              <select id="entrySchoolSelect">
+                <option value="">Pilih sekolah</option>
+              </select>
+              <button id="loadCandidatesBtn" class="primary-action" type="button">Tarik calon SPM</button>
+              <p id="candidateSummary" class="entry-note">Pilih sekolah untuk semak bilangan calon SPM daripada rujukan semasa.</p>
+            </div>
+
+            <div class="entry-card">
+              <label for="csvFileInput">Fail rekod sekolah</label>
+              <input id="csvFileInput" type="file" accept=".csv,text/csv">
+              <button id="saveImportBtn" class="primary-action" type="button" disabled>Simpan rekod</button>
+              <p id="importSummary" class="entry-note">Muat naik fail CSV mengikut template sebelum simpan ke rekod sebenar.</p>
+            </div>
+
+            <div class="entry-card entry-card-wide">
+              <div class="entry-stat-row">
+                <span><strong id="previewTotal">0</strong> baris dibaca</span>
+                <span><strong id="previewAccepted">0</strong> sedia simpan</span>
+                <span><strong id="previewRejected">0</strong> perlu semak</span>
+              </div>
+              <p id="entryStatus" class="entry-note">Modul ini menyimpan rekod kerja sahaja. Senarai sekolah dan murid kekal dibaca daripada rujukan semasa.</p>
+            </div>
+          </div>
+
+          <div class="table-wrap entry-preview-wrap">
+            <table>
+              <thead>
+                <tr>
+                  <th>Status</th>
+                  <th>Murid</th>
+                  <th>Sekolah</th>
+                  <th>Kelas</th>
+                  <th>BM</th>
+                  <th>Sejarah</th>
+                  <th>Risiko</th>
+                  <th>Catatan</th>
+                </tr>
+              </thead>
+              <tbody id="importPreviewTable">
+                <tr><td colspan="8">Preview data akan dipaparkan selepas fail CSV dipilih.</td></tr>
+              </tbody>
+            </table>
+          </div>
         </section>
 
         <section id="ringkasan" class="summary-grid" aria-label="Ringkasan daerah">
@@ -261,6 +319,6 @@
     <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
     <script src="https://unpkg.com/lucide@latest/dist/umd/lucide.min.js"></script>
     <script src="config.js?v=3"></script>
-    <script src="app.js?v=14"></script>
+    <script src="app.js?v=15"></script>
   </body>
 </html>

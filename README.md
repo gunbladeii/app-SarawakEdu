@@ -82,7 +82,8 @@ Cadangan flow:
 1. Data sekolah dan murid dibaca daripada API rujukan.
 2. Supabase menyimpan rekod kerja sahaja: markah, LMS, GPS, risiko, intervensi dan status semakan.
 3. Setiap kemasukan data diikat kepada satu kitaran pemantauan seperti `Percubaan SPM 2026`.
-4. Dashboard daerah membaca view `dashboard_real_school_metrics` dan `dashboard_real_student_risks` selepas data disahkan.
+4. Menu `Kemasukan Data` digunakan untuk pilih sekolah, semak calon SPM, preview CSV dan simpan rekod.
+5. Dashboard daerah membaca view `dashboard_real_school_metrics` dan `dashboard_real_student_risks` selepas data disahkan.
 
 Table dummy sedia ada (`schools` dan `student_risks`) masih dikekalkan sementara UI belum dipindahkan kepada flow sebenar.
 
