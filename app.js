@@ -48,6 +48,11 @@ let referenceSchools = [];
 let referenceStudents = [];
 let importPreviewRows = [];
 let lastImportFileName = "";
+let schoolLoadRequest = null;
+let schoolLoadRetryId = null;
+let schoolLoadRetryCount = 0;
+
+const DATA_ENTRY_ALLOWED_EMAILS = new Set(["gunbladeii25@gmail.com"]);
 
 const dataSourceMessages = {
   local: "Data contoh",
@@ -232,6 +237,14 @@ function setImportSummary(message) {
   if (element) element.textContent = message;
 }
 
+function escapeHtml(value) {
+  return String(value ?? "")
+    .replace(/&/g, "&amp;")
+    .replace(/</g, "&lt;")
+    .replace(/>/g, "&gt;")
+    .replace(/"/g, "&quot;");
+}
+
 function getShortSchoolName(name) {
   return String(name || "")
     .replace(/^SEKOLAH MENENGAH KEBANGSAAN\s+/i, "SMK ")
@@ -239,13 +252,13 @@ function getShortSchoolName(name) {
     .trim();
 }
 
-function populateEntrySchoolSelect() {
+function populateEntrySchoolSelect(emptyLabel = "Pilih sekolah") {
   const select = document.querySelector("#entrySchoolSelect");
   if (!select) return;
 
   const currentValue = select.value;
-  select.innerHTML = `<option value="">Pilih sekolah</option>${referenceSchools
-    .map((school) => `<option value="${school.code}">${getShortSchoolName(school.name)} (${school.code})</option>`)
+  select.innerHTML = `<option value="">${escapeHtml(emptyLabel)}</option>${referenceSchools
+    .map((school) => `<option value="${escapeHtml(school.code)}">${escapeHtml(getShortSchoolName(school.name))} (${escapeHtml(school.code)})</option>`)
     .join("")}`;
 
   if (referenceSchools.some((school) => school.code === currentValue)) {
@@ -253,27 +266,90 @@ function populateEntrySchoolSelect() {
   }
 }
 
-async function loadEntrySchools() {
-  if (!activeSession) {
-    referenceSchools = [];
-    populateEntrySchoolSelect();
-    setEntryStatus("Sila masuk Google untuk mengurus kemasukan data.");
-    return;
+function setEntrySchoolLoading(message) {
+  const select = document.querySelector("#entrySchoolSelect");
+  if (select) {
+    select.innerHTML = `<option value="">${escapeHtml(message)}</option>`;
+  }
+}
+
+function scheduleEntrySchoolRetry(delay = 1000) {
+  if (schoolLoadRetryCount >= 3) return;
+  schoolLoadRetryCount += 1;
+  window.clearTimeout(schoolLoadRetryId);
+  schoolLoadRetryId = window.setTimeout(() => {
+    if (activeSession && referenceSchools.length === 0) {
+      loadEntrySchools({ silent: true });
+    }
+  }, delay);
+}
+
+async function loadEntrySchools(options = {}) {
+  const { silent = false } = options;
+
+  if (schoolLoadRequest) {
+    return schoolLoadRequest;
   }
 
+  schoolLoadRequest = (async () => {
+    if (!activeSession) {
+      referenceSchools = [];
+      schoolLoadRetryCount = 0;
+      window.clearTimeout(schoolLoadRetryId);
+      populateEntrySchoolSelect();
+      setEntryStatus("Sila masuk Google untuk mengurus kemasukan data.");
+      return;
+    }
+
+    if (!isDataEntryAllowed()) {
+      referenceSchools = [];
+      schoolLoadRetryCount = 0;
+      window.clearTimeout(schoolLoadRetryId);
+      populateEntrySchoolSelect();
+      setEntryStatus("Akaun ini belum dibenarkan untuk mengurus kemasukan data sekolah.");
+      return;
+    }
+
+    if (!silent) {
+      schoolLoadRetryCount = 0;
+      setEntrySchoolLoading("Sedang membaca sekolah...");
+      setEntryStatus("Sedang membaca senarai sekolah. Sila tunggu sebentar.");
+    }
+
+    try {
+      const result = await fetchReferenceData("schools");
+      referenceSchools = Array.isArray(result.data) ? result.data : [];
+      populateEntrySchoolSelect(referenceSchools.length ? "Pilih sekolah" : "Tiada sekolah ditemui");
+
+      if (referenceSchools.length) {
+        schoolLoadRetryCount = 0;
+        setEntryStatus(`${referenceSchools.length} sekolah tersedia. Pilih sekolah untuk semak calon SPM.`);
+      } else {
+        setEntryStatus("Senarai sekolah belum ditemui. Cuba muat semula senarai sebentar lagi.");
+        scheduleEntrySchoolRetry(1500);
+      }
+    } catch (error) {
+      console.warn("Senarai sekolah belum dapat dibaca.", error);
+      referenceSchools = [];
+      populateEntrySchoolSelect("Gagal membaca sekolah");
+      setEntryStatus(`Senarai sekolah belum dapat dibaca. ${error.message}`);
+      scheduleEntrySchoolRetry(1500);
+    }
+  })();
+
   try {
-    const result = await fetchReferenceData("schools");
-    referenceSchools = result.data || [];
-    populateEntrySchoolSelect();
-    setEntryStatus(`${referenceSchools.length} sekolah rujukan sedia untuk kemasukan data.`);
-  } catch (error) {
-    referenceSchools = [];
-    populateEntrySchoolSelect();
-    setEntryStatus(error.message);
+    await schoolLoadRequest;
+  } finally {
+    schoolLoadRequest = null;
   }
 }
 
 async function loadEntryCandidates() {
+  if (!isDataEntryAllowed()) {
+    setCandidateSummary("Akaun ini belum dibenarkan untuk mengurus kemasukan data sekolah.");
+    return;
+  }
+
   const schoolCode = document.querySelector("#entrySchoolSelect")?.value || "";
 
   if (!schoolCode) {
@@ -472,6 +548,14 @@ function renderImportPreview() {
 }
 
 async function handleCsvFileChange(event) {
+  if (!isDataEntryAllowed()) {
+    importPreviewRows = [];
+    lastImportFileName = "";
+    renderImportPreview();
+    setImportSummary("Akaun ini belum dibenarkan untuk mengurus kemasukan data sekolah.");
+    return;
+  }
+
   const file = event.target.files?.[0];
   importPreviewRows = [];
   lastImportFileName = file?.name || "";
@@ -500,6 +584,11 @@ async function resolveCycleId(cycleCode) {
 }
 
 async function saveImportRows() {
+  if (!isDataEntryAllowed()) {
+    setEntryStatus("Akaun ini belum dibenarkan untuk mengurus kemasukan data sekolah.");
+    return;
+  }
+
   const validRows = importPreviewRows.filter((row) => row.valid);
   if (!validRows.length) {
     setEntryStatus("Tiada baris yang sedia disimpan.");
@@ -747,6 +836,10 @@ function getUserEmail(session) {
   return session?.user?.email || "";
 }
 
+function isDataEntryAllowed(session = activeSession) {
+  return DATA_ENTRY_ALLOWED_EMAILS.has(getUserEmail(session).toLowerCase());
+}
+
 function getUserAvatar(session) {
   const metadata = session?.user?.user_metadata || {};
   return metadata.avatar_url || metadata.picture || "";
@@ -769,6 +862,73 @@ function showProfileInitial(profilePhoto, profileInitial, label) {
   profileInitial.hidden = false;
 }
 
+function getCurrentRoute() {
+  return (window.location.hash || "#ringkasan").replace(/^#/, "") || "ringkasan";
+}
+
+function isDataEntryRoute() {
+  return getCurrentRoute() === "data-entry";
+}
+
+function renderAuthGateText(session) {
+  const config = getSupabaseConfig();
+  const authGateTitle = document.querySelector("#authGateTitle");
+  const authGateText = document.querySelector("#authGateText");
+  const label = getUserLabel(session);
+
+  if (!authGateTitle || !authGateText) return;
+
+  if (session?.user && isDataEntryRoute() && !isDataEntryAllowed(session)) {
+    authGateTitle.textContent = "Akses kemasukan data belum dibenarkan";
+    authGateText.textContent = `Masuk sebagai ${label}. Akaun ini boleh melihat dashboard, tetapi belum dibenarkan mengurus kemasukan rekod sebenar.`;
+    return;
+  }
+
+  if (session?.user) {
+    authGateTitle.textContent = "Akses pengguna aktif";
+    authGateText.textContent = `Masuk sebagai ${label}. Paparan ini menunjukkan maklumat yang dibenarkan untuk akaun ini.`;
+    return;
+  }
+
+  authGateTitle.textContent = config.requireAuth ? "Sila masuk untuk melihat maklumat" : "Akses masuk sedang disediakan";
+  authGateText.textContent = config.requireAuth
+    ? "Maklumat ini dilindungi. Sila masuk menggunakan akaun Google yang dibenarkan."
+    : "Paparan contoh boleh digunakan sementara akses pengguna dilengkapkan.";
+}
+
+function syncRouteUi() {
+  const route = getCurrentRoute();
+  const entryRoute = route === "data-entry";
+  const entryAllowed = isDataEntryAllowed();
+  const dataEntryNav = document.querySelector("#dataEntryNav");
+
+  document.body.classList.toggle("route-data-entry", entryRoute);
+  document.body.classList.toggle("route-dashboard", !entryRoute);
+  document.body.classList.toggle("data-entry-authorized", entryAllowed);
+  document.body.classList.toggle("data-entry-unauthorized", Boolean(activeSession?.user) && !entryAllowed);
+
+  if (dataEntryNav) {
+    dataEntryNav.hidden = !entryAllowed;
+  }
+
+  document.querySelectorAll(".nav-list a").forEach((link) => {
+    const linkRoute = (link.getAttribute("href") || "").replace(/^#/, "");
+    link.classList.toggle("active", linkRoute === route || (!entryRoute && route === "" && linkRoute === "ringkasan"));
+  });
+
+  renderAuthGateText(activeSession);
+
+  if (entryRoute && activeSession?.user && !entryAllowed) {
+    referenceSchools = [];
+    populateEntrySchoolSelect();
+    setEntryStatus("Akaun ini belum dibenarkan untuk mengurus kemasukan data sekolah.");
+  }
+
+  if (entryRoute && entryAllowed && referenceSchools.length === 0) {
+    loadEntrySchools();
+  }
+}
+
 function updateAuthUi(session) {
   const config = getSupabaseConfig();
   const sidebarLoginBtn = document.querySelector("#sidebarLoginBtn");
@@ -779,8 +939,6 @@ function updateAuthUi(session) {
   const profileInitial = document.querySelector("#profileInitial");
   const profileName = document.querySelector("#profileName");
   const profileEmail = document.querySelector("#profileEmail");
-  const authGateTitle = document.querySelector("#authGateTitle");
-  const authGateText = document.querySelector("#authGateText");
   const isLocked = config.requireAuth && !session?.user;
   document.body.classList.toggle("auth-locked", isLocked);
 
@@ -805,8 +963,8 @@ function updateAuthUi(session) {
     sidebarLoginBtn.hidden = true;
     heroLoginBtn.hidden = true;
     logoutBtn.hidden = false;
-    authGateTitle.textContent = "Akses pengguna aktif";
-    authGateText.textContent = `Masuk sebagai ${label}. Paparan ini menunjukkan maklumat yang dibenarkan untuk akaun ini.`;
+    renderAuthGateText(session);
+    syncRouteUi();
     return;
   }
 
@@ -818,10 +976,8 @@ function updateAuthUi(session) {
   sidebarLoginBtn.hidden = false;
   heroLoginBtn.hidden = false;
   logoutBtn.hidden = true;
-  authGateTitle.textContent = config.requireAuth ? "Sila masuk untuk melihat maklumat" : "Akses masuk sedang disediakan";
-  authGateText.textContent = config.requireAuth
-    ? "Maklumat ini dilindungi. Sila masuk menggunakan akaun Google yang dibenarkan."
-    : "Paparan contoh boleh digunakan sementara akses pengguna dilengkapkan.";
+  renderAuthGateText(null);
+  syncRouteUi();
 }
 
 async function signInWithGoogle() {
@@ -853,6 +1009,10 @@ async function signOut() {
 
   await client.auth.signOut();
   activeSession = null;
+  referenceSchools = [];
+  schoolLoadRetryCount = 0;
+  window.clearTimeout(schoolLoadRetryId);
+  populateEntrySchoolSelect();
   updateAuthUi(null);
   await loadDashboardData();
   renderAll();
@@ -875,7 +1035,11 @@ async function initAuth() {
   client.auth.onAuthStateChange((_event, session) => {
     activeSession = session;
     updateAuthUi(session);
-    Promise.all([loadDashboardData(), loadEntrySchools()]).then(renderAll);
+    const entryLoad = isDataEntryAllowed(session) ? loadEntrySchools({ silent: !isDataEntryRoute() }) : Promise.resolve();
+    Promise.all([loadDashboardData(), entryLoad]).then(() => {
+      renderAll();
+      if (isDataEntryAllowed(session)) scheduleEntrySchoolRetry();
+    });
   });
 }
 
@@ -1300,6 +1464,7 @@ function initPwaStatus() {
 
 document.querySelector("#searchInput").addEventListener("input", renderAll);
 document.querySelector("#riskFilter").addEventListener("change", renderAll);
+window.addEventListener("hashchange", syncRouteUi);
 document.querySelector("#exportBtn").addEventListener("click", () => {
   document.querySelector("#summaryText").textContent = buildSummaryText();
   document.querySelector("#summaryDialog").showModal();
@@ -1313,7 +1478,14 @@ document.querySelector("#cameraStopBtn").addEventListener("click", stopCamera);
 document.querySelector("#sidebarLoginBtn").addEventListener("click", signInWithGoogle);
 document.querySelector("#googleLoginHeroBtn").addEventListener("click", signInWithGoogle);
 document.querySelector("#logoutBtn").addEventListener("click", signOut);
+document.querySelector("#reloadSchoolsBtn").addEventListener("click", () => loadEntrySchools());
 document.querySelector("#loadCandidatesBtn").addEventListener("click", loadEntryCandidates);
+document.querySelector("#entrySchoolSelect").addEventListener("focus", () => {
+  if (activeSession && referenceSchools.length === 0) loadEntrySchools();
+});
+document.querySelector("#entrySchoolSelect").addEventListener("pointerdown", () => {
+  if (activeSession && referenceSchools.length === 0) loadEntrySchools();
+});
 document.querySelector("#csvFileInput").addEventListener("change", handleCsvFileChange);
 document.querySelector("#saveImportBtn").addEventListener("click", saveImportRows);
 
@@ -1322,8 +1494,12 @@ async function initApp() {
   renderIcons();
   await initAuth();
   await loadDashboardData();
-  await loadEntrySchools();
+  if (isDataEntryAllowed()) {
+    await loadEntrySchools({ silent: !isDataEntryRoute() });
+    scheduleEntrySchoolRetry();
+  }
   renderAll();
+  syncRouteUi();
   initPwaStatus();
   checkCameraSupport();
 }

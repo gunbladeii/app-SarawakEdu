@@ -678,6 +678,18 @@ select {
   display: none;
 }
 
+body:not(.route-data-entry) .data-entry-panel,
+body:not(.route-data-entry) .data-entry-denied,
+body.route-data-entry .dashboard-panel,
+body.route-data-entry:not(.data-entry-authorized) .data-entry-panel,
+body.route-data-entry.data-entry-authorized .data-entry-denied {
+  display: none;
+}
+
+body.route-data-entry.auth-locked .data-entry-denied {
+  display: none;
+}
+
 .empty-state {
   padding: 14px;
   border: 1px dashed var(--line-strong);
@@ -800,6 +812,32 @@ select {
   margin-bottom: 16px;
 }
 
+.data-entry-denied {
+  margin-bottom: 16px;
+}
+
+.access-denied-card {
+  display: flex;
+  gap: 14px;
+  align-items: center;
+  min-height: 120px;
+}
+
+.access-denied-card h3,
+.access-denied-card p {
+  margin: 0;
+}
+
+.access-denied-card h3 {
+  font-family: var(--title-font);
+  font-weight: 700;
+}
+
+.access-denied-card p:last-child {
+  margin-top: 6px;
+  color: var(--muted);
+}
+
 .template-link {
   display: inline-flex;
   align-items: center;
@@ -835,6 +873,12 @@ select {
 .entry-card select,
 .entry-card input {
   width: 100%;
+}
+
+.entry-actions {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
+  gap: 8px;
 }
 
 .entry-note {

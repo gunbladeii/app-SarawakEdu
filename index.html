@@ -41,7 +41,7 @@
           <a href="#carta"><span class="nav-icon" data-lucide="chart-no-axes-combined"></span><span>Carta</span></a>
           <a href="#murid"><span class="nav-icon" data-lucide="user-x"></span><span>Murid Berisiko</span></a>
           <a href="#intervensi"><span class="nav-icon" data-lucide="handshake"></span><span>Intervensi</span></a>
-          <a href="#data-entry"><span class="nav-icon" data-lucide="file-up"></span><span>Kemasukan Data</span></a>
+          <a id="dataEntryNav" href="#data-entry"><span class="nav-icon" data-lucide="file-up"></span><span>Kemasukan Data</span></a>
           <a href="#mobile"><span class="nav-icon" data-lucide="qr-code"></span><span>Aplikasi & QR</span></a>
         </nav>
 
@@ -87,6 +87,17 @@
           <button id="googleLoginHeroBtn" class="primary-action" type="button">Masuk dengan Google</button>
         </section>
 
+        <section id="dataEntryDenied" class="panel data-entry-denied" aria-live="polite">
+          <div class="access-denied-card">
+            <span class="auth-icon" data-lucide="lock-keyhole" aria-hidden="true"></span>
+            <div>
+              <p class="eyebrow">Kemasukan data</p>
+              <h3>Akses belum dibenarkan</h3>
+              <p>Dashboard boleh dilihat, tetapi kemasukan rekod sebenar hanya dibuka kepada akaun pentadbir yang diluluskan.</p>
+            </div>
+          </div>
+        </section>
+
         <section id="data-entry" class="panel data-entry-panel" aria-labelledby="data-entry-title">
           <div class="panel-head">
             <div>
@@ -102,7 +113,10 @@
               <select id="entrySchoolSelect">
                 <option value="">Pilih sekolah</option>
               </select>
-              <button id="loadCandidatesBtn" class="primary-action" type="button">Tarik calon SPM</button>
+              <div class="entry-actions">
+                <button id="reloadSchoolsBtn" class="secondary-action" type="button">Muat semula senarai</button>
+                <button id="loadCandidatesBtn" class="primary-action" type="button">Tarik calon SPM</button>
+              </div>
               <p id="candidateSummary" class="entry-note">Pilih sekolah untuk semak bilangan calon SPM daripada rujukan semasa.</p>
             </div>
 
@@ -144,7 +158,7 @@
           </div>
         </section>
 
-        <section id="ringkasan" class="summary-grid" aria-label="Ringkasan daerah">
+        <section id="ringkasan" class="summary-grid dashboard-panel" aria-label="Ringkasan daerah">
           <article class="metric">
             <div class="metric-top"><span class="metric-icon" data-lucide="users"></span><span>Calon SPM</span></div>
             <strong id="totalCandidates">0</strong>
@@ -167,7 +181,7 @@
           </article>
         </section>
 
-        <section id="carta" class="chart-grid" aria-labelledby="chart-title">
+        <section id="carta" class="chart-grid dashboard-panel" aria-labelledby="chart-title">
           <section class="panel wide" aria-labelledby="chart-title">
             <div class="panel-head">
               <div>
@@ -193,7 +207,7 @@
           </section>
         </section>
 
-        <section class="work-grid">
+        <section class="work-grid dashboard-panel">
           <section id="sekolah" class="panel wide" aria-labelledby="schools-title">
             <div class="panel-head">
               <div>
@@ -220,7 +234,7 @@
           </section>
         </section>
 
-        <section class="work-grid bottom-grid">
+        <section class="work-grid bottom-grid dashboard-panel">
           <section id="murid" class="panel wide" aria-labelledby="students-title">
             <div class="panel-head">
               <div>
@@ -257,7 +271,7 @@
           </section>
         </section>
 
-        <section id="mobile" class="work-grid bottom-grid">
+        <section id="mobile" class="work-grid bottom-grid dashboard-panel">
           <section class="panel wide" aria-labelledby="mobile-title">
             <div class="panel-head">
               <div>
@@ -319,6 +333,6 @@
     <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
     <script src="https://unpkg.com/lucide@latest/dist/umd/lucide.min.js"></script>
     <script src="config.js?v=3"></script>
-    <script src="app.js?v=15"></script>
+    <script src="app.js?v=17"></script>
   </body>
 </html>
