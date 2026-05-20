@@ -215,12 +215,35 @@ function getUserLabel(session) {
   return user?.user_metadata?.full_name || user?.email || "Pengguna Google";
 }
 
+function getUserEmail(session) {
+  return session?.user?.email || "";
+}
+
+function getUserAvatar(session) {
+  const metadata = session?.user?.user_metadata || {};
+  return metadata.avatar_url || metadata.picture || "";
+}
+
+function getInitials(label) {
+  return label
+    .split(/\s+/)
+    .filter(Boolean)
+    .slice(0, 2)
+    .map((part) => part[0])
+    .join("")
+    .toUpperCase() || "G";
+}
+
 function updateAuthUi(session) {
   const config = getSupabaseConfig();
-  const loginBtn = document.querySelector("#googleLoginBtn");
+  const sidebarLoginBtn = document.querySelector("#sidebarLoginBtn");
   const heroLoginBtn = document.querySelector("#googleLoginHeroBtn");
   const logoutBtn = document.querySelector("#logoutBtn");
-  const userChip = document.querySelector("#authUser");
+  const sidebarProfile = document.querySelector("#sidebarProfile");
+  const profilePhoto = document.querySelector("#profilePhoto");
+  const profileInitial = document.querySelector("#profileInitial");
+  const profileName = document.querySelector("#profileName");
+  const profileEmail = document.querySelector("#profileEmail");
   const authGateTitle = document.querySelector("#authGateTitle");
   const authGateText = document.querySelector("#authGateText");
   const isLocked = config.requireAuth && !session?.user;
@@ -228,9 +251,16 @@ function updateAuthUi(session) {
 
   if (session?.user) {
     const label = getUserLabel(session);
-    userChip.textContent = label;
-    userChip.hidden = false;
-    loginBtn.hidden = true;
+    const email = getUserEmail(session);
+    const avatar = getUserAvatar(session);
+    sidebarProfile.classList.remove("guest");
+    profileName.textContent = label;
+    profileEmail.textContent = email;
+    profileInitial.textContent = getInitials(label);
+    profilePhoto.hidden = !avatar;
+    profileInitial.hidden = Boolean(avatar);
+    if (avatar) profilePhoto.src = avatar;
+    sidebarLoginBtn.hidden = true;
     heroLoginBtn.hidden = true;
     logoutBtn.hidden = false;
     authGateTitle.textContent = "Login Google aktif";
@@ -238,8 +268,14 @@ function updateAuthUi(session) {
     return;
   }
 
-  userChip.hidden = true;
-  loginBtn.hidden = false;
+  sidebarProfile.classList.add("guest");
+  profilePhoto.hidden = true;
+  profilePhoto.removeAttribute("src");
+  profileInitial.hidden = false;
+  profileInitial.textContent = "G";
+  profileName.textContent = "Google Login";
+  profileEmail.textContent = "Sila masuk untuk akses dashboard";
+  sidebarLoginBtn.hidden = false;
   heroLoginBtn.hidden = false;
   logoutBtn.hidden = true;
   authGateTitle.textContent = config.requireAuth ? "Login Google diperlukan" : "Mod login sudah disediakan";
@@ -684,7 +720,7 @@ document.querySelector("#closeDialog").addEventListener("click", () => {
 document.querySelector("#cameraCheckBtn").addEventListener("click", checkCameraSupport);
 document.querySelector("#cameraStartBtn").addEventListener("click", startCamera);
 document.querySelector("#cameraStopBtn").addEventListener("click", stopCamera);
-document.querySelector("#googleLoginBtn").addEventListener("click", signInWithGoogle);
+document.querySelector("#sidebarLoginBtn").addEventListener("click", signInWithGoogle);
 document.querySelector("#googleLoginHeroBtn").addEventListener("click", signInWithGoogle);
 document.querySelector("#logoutBtn").addEventListener("click", signOut);
 

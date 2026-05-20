@@ -8,7 +8,7 @@
     <title>Pemantauan SPM Serian</title>
     <link rel="manifest" href="manifest.webmanifest">
     <link rel="icon" href="icon.svg" type="image/svg+xml">
-    <link rel="stylesheet" href="styles.css?v=3">
+    <link rel="stylesheet" href="styles.css?v=4">
   </head>
   <body>
     <div class="app-shell">
@@ -20,6 +20,18 @@
             <h1>SPM Watch</h1>
           </div>
         </div>
+
+        <section id="sidebarProfile" class="sidebar-profile guest" aria-label="Profil pengguna">
+          <div class="profile-photo-wrap">
+            <img id="profilePhoto" class="profile-photo" alt="" hidden>
+            <span id="profileInitial" class="profile-initial">G</span>
+            <span class="profile-status" aria-hidden="true"></span>
+          </div>
+          <strong id="profileName">Google Login</strong>
+          <span id="profileEmail">Sila masuk untuk akses dashboard</span>
+          <button id="sidebarLoginBtn" class="sidebar-login" type="button">Masuk Google</button>
+          <button id="logoutBtn" class="sidebar-logout" type="button" hidden>Keluar</button>
+        </section>
 
         <nav class="nav-list">
           <a href="#ringkasan" class="active">Ringkasan</a>
@@ -46,11 +58,6 @@
           </div>
           <div class="top-actions">
             <span id="dataSourceStatus" class="status-chip">Data lokal</span>
-            <div id="authPanel" class="auth-panel">
-              <span id="authUser" class="user-chip" hidden></span>
-              <button id="googleLoginBtn" class="secondary-action" type="button">Masuk Google</button>
-              <button id="logoutBtn" class="secondary-action" type="button" hidden>Keluar</button>
-            </div>
             <label class="search-field">
               <span>Cari</span>
               <input id="searchInput" type="search" placeholder="Sekolah atau murid">
@@ -246,6 +253,6 @@
 
     <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
     <script src="config.js?v=3"></script>
-    <script src="app.js?v=7"></script>
+    <script src="app.js?v=9"></script>
   </body>
 </html>
