@@ -48,10 +48,25 @@ select {
   top: 0;
   display: flex;
   flex-direction: column;
-  height: 100vh;
+  height: 100dvh;
+  max-height: 100dvh;
+  overflow-y: auto;
+  overscroll-behavior: contain;
   padding: 24px;
+  padding-bottom: 28px;
   background: #0f172a;
   color: #f8fafc;
+  scrollbar-color: rgba(203, 213, 225, 0.35) transparent;
+  scrollbar-width: thin;
+}
+
+.sidebar::-webkit-scrollbar {
+  width: 8px;
+}
+
+.sidebar::-webkit-scrollbar-thumb {
+  border-radius: 999px;
+  background: rgba(203, 213, 225, 0.32);
 }
 
 .brand {
@@ -233,8 +248,8 @@ select {
 }
 
 .legend {
-  margin-top: 34px;
-  padding-top: 22px;
+  margin-top: 28px;
+  padding-top: 20px;
   border-top: 1px solid rgba(255, 255, 255, 0.14);
 }
 
@@ -900,6 +915,98 @@ pre {
   }
 }
 
+@media (max-height: 900px) and (min-width: 861px) {
+  .sidebar {
+    padding: 18px;
+    padding-bottom: 22px;
+  }
+
+  .brand-mark {
+    width: 38px;
+    height: 38px;
+  }
+
+  .brand h1 {
+    font-size: 20px;
+  }
+
+  .sidebar-profile {
+    gap: 6px;
+    margin-top: 20px;
+    padding: 12px 10px;
+  }
+
+  .profile-photo-wrap {
+    width: 66px;
+    height: 66px;
+  }
+
+  .profile-photo,
+  .profile-initial {
+    width: 62px;
+    height: 62px;
+    box-shadow: 0 0 0 4px rgba(22, 199, 154, 0.12);
+  }
+
+  .profile-initial {
+    font-size: 25px;
+  }
+
+  .profile-status {
+    right: 0;
+    bottom: 6px;
+    width: 17px;
+    height: 17px;
+  }
+
+  .sidebar-profile.guest .profile-photo-wrap {
+    width: 58px;
+    height: 58px;
+  }
+
+  .sidebar-profile.guest .profile-initial {
+    width: 54px;
+    height: 54px;
+    font-size: 24px;
+  }
+
+  .sidebar-profile strong {
+    font-size: 15px;
+  }
+
+  .sidebar-profile span:not(.profile-status):not(.profile-initial) {
+    font-size: 12px;
+  }
+
+  .sidebar-login,
+  .sidebar-logout {
+    min-height: 34px;
+    margin-top: 6px;
+  }
+
+  .nav-list {
+    gap: 4px;
+    margin-top: 22px;
+  }
+
+  .nav-list a {
+    padding: 8px 10px;
+  }
+
+  .legend {
+    margin-top: 22px;
+    padding-top: 16px;
+  }
+
+  .legend h2 {
+    margin-bottom: 10px;
+  }
+
+  .legend p {
+    margin: 7px 0;
+  }
+}
+
 @media (max-width: 860px) {
   .app-shell {
     grid-template-columns: 1fr;
@@ -909,6 +1016,8 @@ pre {
     position: static;
     display: block;
     height: auto;
+    max-height: none;
+    overflow: visible;
   }
 
   .sidebar-profile strong,
