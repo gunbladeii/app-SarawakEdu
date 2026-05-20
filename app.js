@@ -234,6 +234,13 @@ function getInitials(label) {
     .toUpperCase() || "G";
 }
 
+function showProfileInitial(profilePhoto, profileInitial, label) {
+  profilePhoto.hidden = true;
+  profilePhoto.removeAttribute("src");
+  profileInitial.textContent = getInitials(label);
+  profileInitial.hidden = false;
+}
+
 function updateAuthUi(session) {
   const config = getSupabaseConfig();
   const sidebarLoginBtn = document.querySelector("#sidebarLoginBtn");
@@ -257,9 +264,16 @@ function updateAuthUi(session) {
     profileName.textContent = label;
     profileEmail.textContent = email;
     profileInitial.textContent = getInitials(label);
-    profilePhoto.hidden = !avatar;
-    profileInitial.hidden = Boolean(avatar);
-    if (avatar) profilePhoto.src = avatar;
+    profilePhoto.onerror = () => showProfileInitial(profilePhoto, profileInitial, label);
+
+    if (avatar) {
+      profilePhoto.hidden = false;
+      profileInitial.hidden = true;
+      profilePhoto.src = avatar;
+    } else {
+      showProfileInitial(profilePhoto, profileInitial, label);
+    }
+
     sidebarLoginBtn.hidden = true;
     heroLoginBtn.hidden = true;
     logoutBtn.hidden = false;
@@ -269,10 +283,8 @@ function updateAuthUi(session) {
   }
 
   sidebarProfile.classList.add("guest");
-  profilePhoto.hidden = true;
-  profilePhoto.removeAttribute("src");
-  profileInitial.hidden = false;
-  profileInitial.textContent = "G";
+  profilePhoto.onerror = null;
+  showProfileInitial(profilePhoto, profileInitial, "Google");
   profileName.textContent = "Google Login";
   profileEmail.textContent = "Sila masuk untuk akses dashboard";
   sidebarLoginBtn.hidden = false;
