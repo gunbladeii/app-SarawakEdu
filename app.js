@@ -54,7 +54,8 @@ function getSupabaseConfig() {
   const config = window.SPM_WATCH_CONFIG || {};
   return {
     supabaseUrl: (config.supabaseUrl || "").replace(/\/$/, ""),
-    supabaseAnonKey: config.supabaseAnonKey || ""
+    supabaseAnonKey: config.supabaseAnonKey || "",
+    requireAuth: Boolean(config.requireAuth)
   };
 }
 
@@ -134,11 +135,23 @@ function mapInterventionRow(row) {
   };
 }
 
+function clearDashboardData() {
+  schools = [];
+  students = [];
+  interventions = [];
+}
+
 async function loadDashboardData() {
   const config = getSupabaseConfig();
 
   if (!hasSupabaseConfig(config)) {
     setDataSourceStatus("Data lokal");
+    return;
+  }
+
+  if (config.requireAuth && !activeSession) {
+    clearDashboardData();
+    setDataSourceStatus("Perlu login");
     return;
   }
 
@@ -169,6 +182,11 @@ async function loadDashboardData() {
     setDataSourceStatus("Supabase live");
   } catch (error) {
     console.warn(error);
+    if (config.requireAuth) {
+      clearDashboardData();
+      setDataSourceStatus("Akses ditolak");
+      return;
+    }
     setDataSourceStatus("Fallback lokal");
   }
 }
@@ -186,12 +204,15 @@ function getUserLabel(session) {
 }
 
 function updateAuthUi(session) {
+  const config = getSupabaseConfig();
   const loginBtn = document.querySelector("#googleLoginBtn");
   const heroLoginBtn = document.querySelector("#googleLoginHeroBtn");
   const logoutBtn = document.querySelector("#logoutBtn");
   const userChip = document.querySelector("#authUser");
   const authGateTitle = document.querySelector("#authGateTitle");
   const authGateText = document.querySelector("#authGateText");
+  const isLocked = config.requireAuth && !session?.user;
+  document.body.classList.toggle("auth-locked", isLocked);
 
   if (session?.user) {
     const label = getUserLabel(session);
@@ -209,8 +230,10 @@ function updateAuthUi(session) {
   loginBtn.hidden = false;
   heroLoginBtn.hidden = false;
   logoutBtn.hidden = true;
-  authGateTitle.textContent = "Mod login sudah disediakan";
-  authGateText.textContent = "Aktifkan Google provider di Supabase untuk guna sign-up/login sebenar. Dashboard demo kekal boleh dibaca sementara kita lengkapkan polisi akses.";
+  authGateTitle.textContent = config.requireAuth ? "Login Google diperlukan" : "Mod login sudah disediakan";
+  authGateText.textContent = config.requireAuth
+    ? "Dashboard production dikunci. Sila masuk menggunakan akaun Google yang dibenarkan."
+    : "Aktifkan Google provider di Supabase untuk guna sign-up/login sebenar. Dashboard demo kekal boleh dibaca sementara kita lengkapkan polisi akses.";
 }
 
 async function signInWithGoogle() {
@@ -304,8 +327,12 @@ function getFilteredData() {
 function renderSummary() {
   const totalCandidates = schools.reduce((sum, school) => sum + school.candidates, 0);
   const totalRed = schools.reduce((sum, school) => sum + school.red, 0);
-  const weightedPass = schools.reduce((sum, school) => sum + school.pass * school.candidates, 0) / totalCandidates;
-  const weightedAttendance = schools.reduce((sum, school) => sum + school.attendance * school.candidates, 0) / totalCandidates;
+  const weightedPass = totalCandidates
+    ? schools.reduce((sum, school) => sum + school.pass * school.candidates, 0) / totalCandidates
+    : 0;
+  const weightedAttendance = totalCandidates
+    ? schools.reduce((sum, school) => sum + school.attendance * school.candidates, 0) / totalCandidates
+    : 0;
 
   document.querySelector("#totalCandidates").textContent = totalCandidates.toLocaleString("ms-MY");
   document.querySelector("#redCount").textContent = totalRed.toLocaleString("ms-MY");
@@ -327,7 +354,8 @@ function renderCharts() {
     ? Math.round(schools.reduce((sum, school) => sum + school.pass * school.candidates, 0) / totalCandidates)
     : 0;
 
-  chart.innerHTML = schools
+  chart.innerHTML = schools.length
+    ? schools
     .map(
       (school) => `
         <div class="bar-row">
@@ -339,7 +367,8 @@ function renderCharts() {
         </div>
       `
     )
-    .join("");
+    .join("")
+    : `<div class="empty-state">Data akan dipaparkan selepas login Google.</div>`;
 
   donut.style.setProperty("--red-deg", `${redDeg}deg`);
   donut.style.setProperty("--amber-deg", `${amberDeg}deg`);
@@ -359,7 +388,8 @@ function renderCharts() {
 
 function renderSchools(filteredSchools) {
   const grid = document.querySelector("#schoolGrid");
-  grid.innerHTML = filteredSchools
+  grid.innerHTML = filteredSchools.length
+    ? filteredSchools
     .map((school) => {
       const risk = getSchoolRisk(school);
       return `
@@ -382,7 +412,8 @@ function renderSchools(filteredSchools) {
         </article>
       `;
     })
-    .join("");
+    .join("")
+    : `<div class="empty-state">Tiada data sekolah untuk dipaparkan.</div>`;
 }
 
 function renderDrivers() {
@@ -412,7 +443,8 @@ function renderDrivers() {
 
 function renderStudents(filteredStudents) {
   const sorted = [...filteredStudents].sort((a, b) => riskScore[b.risk] - riskScore[a.risk]);
-  document.querySelector("#studentTable").innerHTML = sorted
+  document.querySelector("#studentTable").innerHTML = sorted.length
+    ? sorted
     .map(
       (student) => `
         <tr>
@@ -424,11 +456,13 @@ function renderStudents(filteredStudents) {
         </tr>
       `
     )
-    .join("");
+    .join("")
+    : `<tr><td colspan="5">Tiada data murid risiko untuk dipaparkan.</td></tr>`;
 }
 
 function renderInterventions() {
-  document.querySelector("#interventionStack").innerHTML = interventions
+  document.querySelector("#interventionStack").innerHTML = interventions.length
+    ? interventions
     .map(
       (item) => `
         <div class="intervention-item">
@@ -437,7 +471,8 @@ function renderInterventions() {
         </div>
       `
     )
-    .join("");
+    .join("")
+    : `<div class="empty-state">Tiada saluran intervensi untuk dipaparkan.</div>`;
 }
 
 function renderAll() {

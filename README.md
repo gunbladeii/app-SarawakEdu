@@ -51,7 +51,7 @@ Prototaip semasa sudah ada `manifest.webmanifest`, `sw.js` dan modul permission 
 
 ## Google Auth
 
-Frontend sudah ada butang `Masuk Google`, session detection dan `Keluar` menggunakan Supabase Auth.
+Frontend sudah ada butang `Masuk Google`, session detection dan `Keluar` menggunakan Supabase Auth. `config.js` kini menetapkan `requireAuth: true`, jadi dashboard production dikunci sehingga pengguna login.
 
 Setup di Supabase:
 
@@ -80,9 +80,9 @@ Selepas login Google berjaya, app akan menggunakan access token pengguna untuk m
 
 ## Polisi Auth-Only
 
-Fail `supabase-auth-policies.sql` disediakan untuk fasa selepas Google login disahkan berfungsi.
+Fail `supabase-auth-policies.sql` disediakan untuk fasa selepas Google login disahkan berfungsi atau selepas Google provider production siap.
 
-Jangan run fail ini terlalu awal kerana ia akan menutup akses `anon` kepada dashboard. Selepas dijalankan, hanya pengguna yang sudah login boleh membaca data melalui REST API Supabase.
+Selepas dijalankan, akses `anon` kepada table dashboard ditutup dan hanya pengguna yang sudah login boleh membaca data melalui REST API Supabase.
 
 ## Setup Supabase
 

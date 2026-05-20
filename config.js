@@ -1,4 +1,5 @@
 window.SPM_WATCH_CONFIG = {
   supabaseUrl: "https://eqexeckerwsqeiaecrtv.supabase.co",
-  supabaseAnonKey: "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImVxZXhlY2tlcndzcWVpYWVjcnR2Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzkyMTkwNDQsImV4cCI6MjA5NDc5NTA0NH0.yIFIgTv8QrO4jDnZEk_avGzJXJCdn_rDaqxBrCwT53k"
+  supabaseAnonKey: "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImVxZXhlY2tlcndzcWVpYWVjcnR2Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzkyMTkwNDQsImV4cCI6MjA5NDc5NTA0NH0.yIFIgTv8QrO4jDnZEk_avGzJXJCdn_rDaqxBrCwT53k",
+  requireAuth: true
 };

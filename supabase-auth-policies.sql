@@ -4,6 +4,9 @@
 drop policy if exists "dashboard read schools" on public.schools;
 drop policy if exists "dashboard read student risks" on public.student_risks;
 drop policy if exists "dashboard read intervention channels" on public.intervention_channels;
+drop policy if exists "authenticated read schools" on public.schools;
+drop policy if exists "authenticated read student risks" on public.student_risks;
+drop policy if exists "authenticated read intervention channels" on public.intervention_channels;
 
 revoke select on public.schools from anon;
 revoke select on public.student_risks from anon;
