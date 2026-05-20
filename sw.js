@@ -1,4 +1,4 @@
-const CACHE_NAME = "spm-watch-serian-v16";
+const CACHE_NAME = "spm-watch-serian-v17";
 const APP_ASSETS = [
   "./",
   "./index.html",
@@ -6,7 +6,10 @@ const APP_ASSETS = [
   "./config.js",
   "./app.js",
   "./manifest.webmanifest",
-  "./icon.svg"
+  "./icon.svg",
+  "./assets/fonts/orbitron-medium.ttf",
+  "./assets/fonts/orbitron-bold.ttf",
+  "./assets/fonts/OFL-Orbitron.md"
 ];
 
 self.addEventListener("install", (event) => {

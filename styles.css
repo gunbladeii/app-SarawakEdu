@@ -1,3 +1,19 @@
+@font-face {
+  font-family: "Orbitron MySPMCare";
+  src: url("./assets/fonts/orbitron-medium.ttf") format("truetype");
+  font-display: swap;
+  font-style: normal;
+  font-weight: 500;
+}
+
+@font-face {
+  font-family: "Orbitron MySPMCare";
+  src: url("./assets/fonts/orbitron-bold.ttf") format("truetype");
+  font-display: swap;
+  font-style: normal;
+  font-weight: 700;
+}
+
 :root {
   --bg: #141527;
   --bg-deep: #0d1020;
@@ -22,6 +38,7 @@
   --rose: #e055c7;
   --shadow: 0 18px 44px rgba(3, 6, 18, 0.34);
   --soft-shadow: 0 12px 28px rgba(3, 6, 18, 0.2);
+  --title-font: "Orbitron MySPMCare", Arial, Helvetica, sans-serif;
 }
 
 * {
@@ -143,7 +160,9 @@ button {
 }
 
 .brand h1 {
+  font-family: var(--title-font);
   font-size: 22px;
+  font-weight: 700;
   line-height: 1.08;
 }
 
@@ -218,7 +237,7 @@ button {
   background: linear-gradient(145deg, #2857ea, #2741c7);
   color: #ffffff;
   font-size: 32px;
-  font-weight: 900;
+  font-weight: 700;
 }
 
 .profile-status {
@@ -347,8 +366,10 @@ button {
 }
 
 .legend h2 {
+  font-family: var(--title-font);
   margin: 0 0 12px;
   font-size: 14px;
+  font-weight: 700;
 }
 
 .legend p {
@@ -448,6 +469,7 @@ main > * {
   width: fit-content;
   max-width: 100%;
   color: #ffffff;
+  font-family: var(--title-font);
   font-size: clamp(46px, 6.8vw, 104px);
   font-weight: 900;
   line-height: 0.92;
@@ -639,6 +661,11 @@ select {
   margin: 0;
 }
 
+.auth-gate h3 {
+  font-family: var(--title-font);
+  font-weight: 700;
+}
+
 .auth-gate p:last-child {
   margin-top: 6px;
   color: var(--muted);
@@ -725,7 +752,9 @@ select {
   justify-content: space-between;
   gap: 10px;
   color: var(--muted);
+  font-family: var(--title-font);
   font-size: 14px;
+  font-weight: 700;
 }
 
 .metric-icon {
@@ -780,7 +809,9 @@ select {
 
 .panel h3 {
   color: #ffffff;
+  font-family: var(--title-font);
   font-size: 21px;
+  font-weight: 700;
   line-height: 1.15;
 }
 
@@ -865,7 +896,9 @@ select {
 .school-card h4 {
   margin: 8px 0 0;
   color: #ffffff;
+  font-family: var(--title-font);
   font-size: 17px;
+  font-weight: 700;
   line-height: 1.15;
 }
 
@@ -971,6 +1004,8 @@ select {
   display: block;
   margin-bottom: 4px;
   color: #ffffff;
+  font-family: var(--title-font);
+  font-weight: 700;
 }
 
 .driver-item span,

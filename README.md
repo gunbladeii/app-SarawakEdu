@@ -9,6 +9,11 @@ Prototaip awal aplikasi pemantauan prestasi SPM untuk 9 sekolah menengah di daer
 - Membantu PPD/sekolah merancang intervensi awal bersama ibu bapa, ketua kaum, penghulu, YB dan agensi sokongan.
 - Menjadi asas sebelum peluasan ke seluruh Sarawak.
 
+## Reka Bentuk Paparan
+
+- Tajuk kad dan panel menggunakan font Orbitron daripada 1001Fonts untuk memberi rasa digital yang selaras dengan tema MySPMCare.
+- Font Orbitron disimpan terus dalam projek di `assets/fonts/` supaya paparan kekal konsisten apabila dibuka pada peranti berbeza.
+
 ## Logik Risiko Semasa
 
 Status sekolah dikira daripada tiga isyarat awal:
