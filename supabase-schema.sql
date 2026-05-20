@@ -72,6 +72,9 @@ select
   sr.risk::text as risk,
   sr.issue,
   sr.intervention,
+  sr.attendance_rate,
+  sr.last_reviewed,
+  sr.updated_at,
   sr.gps_focus,
   sr.bm_pass,
   sr.sejarah_pass,
@@ -80,10 +83,7 @@ select
     when not sr.bm_pass and not sr.sejarah_pass then 'Perlu bantuan Bahasa Melayu dan Sejarah'
     when not sr.bm_pass then 'Perlu bantuan Bahasa Melayu'
     else 'Perlu bantuan Sejarah'
-  end as lms_focus,
-  sr.attendance_rate,
-  sr.last_reviewed,
-  sr.updated_at
+  end as lms_focus
 from public.student_risks sr
 join public.schools s on s.code = sr.school_code;
 
