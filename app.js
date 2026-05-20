@@ -63,6 +63,20 @@ function hasSupabaseConfig(config) {
   return Boolean(config.supabaseUrl && config.supabaseAnonKey);
 }
 
+function normalizeOAuthHash() {
+  const hash = window.location.hash || "";
+  const tokenMarker = "#access_token=";
+
+  if (!hash.includes(tokenMarker) || hash.startsWith(tokenMarker)) {
+    return;
+  }
+
+  const tokenStart = hash.indexOf(tokenMarker);
+  const authHash = hash.slice(tokenStart);
+  const cleanUrl = `${window.location.origin}${window.location.pathname}${window.location.search}${authHash}`;
+  window.history.replaceState(null, "", cleanUrl);
+}
+
 function getSupabaseClient() {
   const config = getSupabaseConfig();
 
@@ -71,6 +85,7 @@ function getSupabaseClient() {
   }
 
   if (!supabaseClient) {
+    normalizeOAuthHash();
     supabaseClient = window.supabase.createClient(config.supabaseUrl, config.supabaseAnonKey, {
       auth: {
         autoRefreshToken: true,
@@ -192,10 +207,7 @@ async function loadDashboardData() {
 }
 
 function getRedirectUrl() {
-  const url = new URL(window.location.href);
-  url.search = "";
-  url.hash = "ringkasan";
-  return url.toString();
+  return `${window.location.origin}${window.location.pathname}`;
 }
 
 function getUserLabel(session) {
