@@ -100,6 +100,7 @@ select {
   justify-items: center;
   gap: 8px;
   margin-top: 28px;
+  min-width: 0;
   padding: 16px 12px;
   border: 1px solid rgba(255, 255, 255, 0.12);
   border-radius: 8px;
@@ -149,19 +150,27 @@ select {
 }
 
 .sidebar-profile strong {
-  max-width: 100%;
-  overflow-wrap: anywhere;
+  display: block;
+  width: 100%;
+  max-width: 220px;
+  min-width: 0;
   color: #ffffff;
-  font-size: 16px;
-  line-height: 1.3;
+  font-size: clamp(15px, 1.35vw, 18px);
+  line-height: 1.22;
+  overflow-wrap: anywhere;
+  text-wrap: balance;
 }
 
 .sidebar-profile span:not(.profile-status):not(.profile-initial) {
-  max-width: 100%;
+  display: block;
+  width: 100%;
+  max-width: 230px;
+  min-width: 0;
   overflow-wrap: anywhere;
+  word-break: break-word;
   color: #a7b7cc;
-  font-size: 13px;
-  line-height: 1.35;
+  font-size: clamp(12px, 1.05vw, 14px);
+  line-height: 1.28;
 }
 
 .sidebar-login,
@@ -900,6 +909,11 @@ pre {
     position: static;
     display: block;
     height: auto;
+  }
+
+  .sidebar-profile strong,
+  .sidebar-profile span:not(.profile-status):not(.profile-initial) {
+    max-width: 100%;
   }
 
   .topbar,
