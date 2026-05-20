@@ -42,6 +42,8 @@ const riskScore = {
 let cameraStream = null;
 let scanFrameId = null;
 let qrDetector = null;
+let supabaseClient = null;
+let activeSession = null;
 
 function setDataSourceStatus(message) {
   const element = document.querySelector("#dataSourceStatus");
@@ -60,11 +62,36 @@ function hasSupabaseConfig(config) {
   return Boolean(config.supabaseUrl && config.supabaseAnonKey);
 }
 
+function getSupabaseClient() {
+  const config = getSupabaseConfig();
+
+  if (!hasSupabaseConfig(config) || !window.supabase?.createClient) {
+    return null;
+  }
+
+  if (!supabaseClient) {
+    supabaseClient = window.supabase.createClient(config.supabaseUrl, config.supabaseAnonKey, {
+      auth: {
+        autoRefreshToken: true,
+        detectSessionInUrl: true,
+        persistSession: true
+      }
+    });
+  }
+
+  return supabaseClient;
+}
+
+function getSupabaseAccessToken(config) {
+  return activeSession?.access_token || config.supabaseAnonKey;
+}
+
 async function fetchSupabaseRows(path, config) {
+  const accessToken = getSupabaseAccessToken(config);
   const response = await fetch(`${config.supabaseUrl}/rest/v1/${path}`, {
     headers: {
       apikey: config.supabaseAnonKey,
-      authorization: `Bearer ${config.supabaseAnonKey}`,
+      authorization: `Bearer ${accessToken}`,
       accept: "application/json"
     }
   });
@@ -146,6 +173,101 @@ async function loadDashboardData() {
   }
 }
 
+function getRedirectUrl() {
+  const url = new URL(window.location.href);
+  url.search = "";
+  url.hash = "ringkasan";
+  return url.toString();
+}
+
+function getUserLabel(session) {
+  const user = session?.user;
+  return user?.user_metadata?.full_name || user?.email || "Pengguna Google";
+}
+
+function updateAuthUi(session) {
+  const loginBtn = document.querySelector("#googleLoginBtn");
+  const heroLoginBtn = document.querySelector("#googleLoginHeroBtn");
+  const logoutBtn = document.querySelector("#logoutBtn");
+  const userChip = document.querySelector("#authUser");
+  const authGateTitle = document.querySelector("#authGateTitle");
+  const authGateText = document.querySelector("#authGateText");
+
+  if (session?.user) {
+    const label = getUserLabel(session);
+    userChip.textContent = label;
+    userChip.hidden = false;
+    loginBtn.hidden = true;
+    heroLoginBtn.hidden = true;
+    logoutBtn.hidden = false;
+    authGateTitle.textContent = "Login Google aktif";
+    authGateText.textContent = `Masuk sebagai ${label}. Data Supabase akan dibaca menggunakan session pengguna ini.`;
+    return;
+  }
+
+  userChip.hidden = true;
+  loginBtn.hidden = false;
+  heroLoginBtn.hidden = false;
+  logoutBtn.hidden = true;
+  authGateTitle.textContent = "Mod login sudah disediakan";
+  authGateText.textContent = "Aktifkan Google provider di Supabase untuk guna sign-up/login sebenar. Dashboard demo kekal boleh dibaca sementara kita lengkapkan polisi akses.";
+}
+
+async function signInWithGoogle() {
+  const client = getSupabaseClient();
+
+  if (!client) {
+    window.alert("Supabase client belum tersedia. Semak config.js dan sambungan internet.");
+    return;
+  }
+
+  const { error } = await client.auth.signInWithOAuth({
+    provider: "google",
+    options: {
+      queryParams: {
+        prompt: "select_account"
+      },
+      redirectTo: getRedirectUrl()
+    }
+  });
+
+  if (error) {
+    window.alert(`Google login gagal: ${error.message}`);
+  }
+}
+
+async function signOut() {
+  const client = getSupabaseClient();
+  if (!client) return;
+
+  await client.auth.signOut();
+  activeSession = null;
+  updateAuthUi(null);
+  await loadDashboardData();
+  renderAll();
+}
+
+async function initAuth() {
+  const client = getSupabaseClient();
+
+  if (!client) {
+    updateAuthUi(null);
+    return;
+  }
+
+  const { data, error } = await client.auth.getSession();
+  if (!error) {
+    activeSession = data.session;
+  }
+  updateAuthUi(activeSession);
+
+  client.auth.onAuthStateChange((_event, session) => {
+    activeSession = session;
+    updateAuthUi(session);
+    loadDashboardData().then(renderAll);
+  });
+}
+
 function getSchoolRisk(school) {
   const redRate = school.red / school.candidates;
   if (school.pass < 78 || school.attendance < 87 || redRate > 0.1) return "red";
@@ -189,6 +311,50 @@ function renderSummary() {
   document.querySelector("#redCount").textContent = totalRed.toLocaleString("ms-MY");
   document.querySelector("#passForecast").textContent = formatPct(weightedPass);
   document.querySelector("#attendanceAvg").textContent = formatPct(weightedAttendance);
+}
+
+function renderCharts() {
+  const chart = document.querySelector("#performanceChart");
+  const donut = document.querySelector("#riskDonut");
+  const legend = document.querySelector("#riskLegend");
+  const totalCandidates = schools.reduce((sum, school) => sum + school.candidates, 0);
+  const totalRed = schools.reduce((sum, school) => sum + school.red, 0);
+  const totalAmber = schools.reduce((sum, school) => sum + school.amber, 0);
+  const totalGreen = Math.max(totalCandidates - totalRed - totalAmber, 0);
+  const redDeg = totalCandidates ? (totalRed / totalCandidates) * 360 : 0;
+  const amberDeg = totalCandidates ? redDeg + (totalAmber / totalCandidates) * 360 : redDeg;
+  const safeAvg = totalCandidates
+    ? Math.round(schools.reduce((sum, school) => sum + school.pass * school.candidates, 0) / totalCandidates)
+    : 0;
+
+  chart.innerHTML = schools
+    .map(
+      (school) => `
+        <div class="bar-row">
+          <span title="${school.name}">${school.name}</span>
+          <div class="bar-track" aria-label="${school.name} ramalan lulus ${school.pass}%">
+            <span class="bar-fill" style="--bar-value: ${Math.min(school.pass, 100)}%"></span>
+          </div>
+          <strong>${school.pass}%</strong>
+        </div>
+      `
+    )
+    .join("");
+
+  donut.style.setProperty("--red-deg", `${redDeg}deg`);
+  donut.style.setProperty("--amber-deg", `${amberDeg}deg`);
+  donut.dataset.label = `${safeAvg}%`;
+  legend.innerHTML = [
+    ["Merah", totalRed, "red"],
+    ["Kuning", totalAmber, "amber"],
+    ["Hijau", totalGreen, "green"]
+  ]
+    .map(
+      ([label, value, color]) => `
+        <p><span><span class="dot ${color}"></span> ${label}</span><strong>${Number(value).toLocaleString("ms-MY")}</strong></p>
+      `
+    )
+    .join("");
 }
 
 function renderSchools(filteredSchools) {
@@ -277,6 +443,7 @@ function renderInterventions() {
 function renderAll() {
   const { filteredSchools, filteredStudents } = getFilteredData();
   renderSummary();
+  renderCharts();
   renderSchools(filteredSchools);
   renderDrivers();
   renderStudents(filteredStudents);
@@ -470,8 +637,12 @@ document.querySelector("#closeDialog").addEventListener("click", () => {
 document.querySelector("#cameraCheckBtn").addEventListener("click", checkCameraSupport);
 document.querySelector("#cameraStartBtn").addEventListener("click", startCamera);
 document.querySelector("#cameraStopBtn").addEventListener("click", stopCamera);
+document.querySelector("#googleLoginBtn").addEventListener("click", signInWithGoogle);
+document.querySelector("#googleLoginHeroBtn").addEventListener("click", signInWithGoogle);
+document.querySelector("#logoutBtn").addEventListener("click", signOut);
 
 async function initApp() {
+  await initAuth();
   await loadDashboardData();
   renderAll();
   initPwaStatus();

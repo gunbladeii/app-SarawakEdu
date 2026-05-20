@@ -49,6 +49,41 @@ Untuk sasaran universal di laptop, desktop dan telefon, pendekatan paling sesuai
 
 Prototaip semasa sudah ada `manifest.webmanifest`, `sw.js` dan modul permission kamera sebagai asas PWA.
 
+## Google Auth
+
+Frontend sudah ada butang `Masuk Google`, session detection dan `Keluar` menggunakan Supabase Auth.
+
+Setup di Supabase:
+
+1. Pergi ke Authentication > Providers.
+2. Aktifkan Google.
+3. Masukkan Google OAuth Client ID dan Client Secret.
+4. Pergi ke Authentication > URL Configuration.
+5. Set Site URL kepada `https://app-sarawakedu.vercel.app`.
+6. Tambah Redirect URLs:
+
+```text
+https://app-sarawakedu.vercel.app/**
+http://localhost:8080/**
+https://*-gunbladeiis-projects.vercel.app/**
+```
+
+Setup di Google Cloud OAuth:
+
+- Authorized JavaScript origins:
+  - `https://app-sarawakedu.vercel.app`
+  - `http://localhost:8080`
+- Authorized redirect URI:
+  - Ambil callback URL daripada halaman Google provider di Supabase.
+
+Selepas login Google berjaya, app akan menggunakan access token pengguna untuk membaca data Supabase.
+
+## Polisi Auth-Only
+
+Fail `supabase-auth-policies.sql` disediakan untuk fasa selepas Google login disahkan berfungsi.
+
+Jangan run fail ini terlalu awal kerana ia akan menutup akses `anon` kepada dashboard. Selepas dijalankan, hanya pengguna yang sudah login boleh membaca data melalui REST API Supabase.
+
 ## Setup Supabase
 
 Fail yang disediakan:
@@ -86,6 +121,14 @@ Frontend akan cuba baca data daripada Supabase melalui REST API:
 - `intervention_channels`
 
 Jika `config.js` belum diisi atau Supabase gagal dicapai, dashboard akan fallback kepada data lokal supaya demo masih berjalan.
+
+## Carta Animasi
+
+Dashboard kini ada seksyen `Carta`:
+
+- Bar chart animasi untuk ramalan lulus setiap sekolah.
+- Donut chart animasi untuk komposisi murid risiko merah, kuning dan hijau.
+- Carta dijana terus daripada data Supabase/fallback lokal, jadi ia akan ikut data sebenar selepas table dikemas kini.
 
 ## Deploy Ke Vercel
 

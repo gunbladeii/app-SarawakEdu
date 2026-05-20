@@ -166,7 +166,32 @@ main {
 .top-actions {
   display: flex;
   gap: 10px;
-  align-items: end;
+  align-items: center;
+  flex-wrap: wrap;
+  justify-content: end;
+}
+
+.auth-panel {
+  display: flex;
+  gap: 8px;
+  align-items: center;
+}
+
+.user-chip {
+  display: inline-flex;
+  align-items: center;
+  min-height: 34px;
+  max-width: 220px;
+  overflow: hidden;
+  border: 1px solid var(--line);
+  border-radius: 999px;
+  background: #ffffff;
+  color: var(--ink);
+  padding: 0 10px;
+  font-size: 12px;
+  font-weight: 700;
+  text-overflow: ellipsis;
+  white-space: nowrap;
 }
 
 .search-field {
@@ -210,7 +235,8 @@ select {
 
 .summary-grid,
 .work-grid,
-.bottom-grid {
+.bottom-grid,
+.chart-grid {
   display: grid;
   gap: 16px;
 }
@@ -218,6 +244,34 @@ select {
 .summary-grid {
   grid-template-columns: repeat(4, minmax(0, 1fr));
   margin-bottom: 16px;
+}
+
+.chart-grid {
+  grid-template-columns: minmax(0, 2fr) minmax(320px, 0.9fr);
+  margin-bottom: 16px;
+}
+
+.auth-gate {
+  display: flex;
+  gap: 18px;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: 16px;
+  padding: 18px;
+  border: 1px solid #bfdbfe;
+  border-radius: 8px;
+  background: #eff6ff;
+  box-shadow: var(--shadow);
+}
+
+.auth-gate h3,
+.auth-gate p {
+  margin: 0;
+}
+
+.auth-gate p:last-child {
+  margin-top: 6px;
+  color: #475569;
 }
 
 .metric,
@@ -408,6 +462,10 @@ select {
   cursor: pointer;
 }
 
+.primary-action:hover {
+  background: #1d4ed8;
+}
+
 .secondary-action {
   min-height: 40px;
   border: 1px solid var(--line);
@@ -416,6 +474,132 @@ select {
   color: var(--ink);
   padding: 0 14px;
   cursor: pointer;
+}
+
+.bar-chart {
+  display: grid;
+  gap: 12px;
+}
+
+.bar-row {
+  display: grid;
+  grid-template-columns: minmax(130px, 1fr) minmax(160px, 2.2fr) 48px;
+  gap: 10px;
+  align-items: center;
+}
+
+.bar-row span:first-child {
+  overflow: hidden;
+  color: var(--ink);
+  font-size: 13px;
+  font-weight: 700;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.bar-track {
+  position: relative;
+  overflow: hidden;
+  height: 14px;
+  border-radius: 999px;
+  background: #e2e8f0;
+}
+
+.bar-track::after {
+  position: absolute;
+  top: 0;
+  bottom: 0;
+  left: 80%;
+  width: 2px;
+  background: rgba(15, 23, 42, 0.25);
+  content: "";
+}
+
+.bar-fill {
+  display: block;
+  width: var(--bar-value);
+  height: 100%;
+  border-radius: inherit;
+  background: linear-gradient(90deg, var(--teal), var(--blue));
+  animation: growBar 900ms ease-out both;
+  transform-origin: left;
+}
+
+.bar-row strong {
+  color: var(--muted);
+  font-size: 13px;
+  text-align: right;
+}
+
+.donut-wrap {
+  display: grid;
+  gap: 16px;
+  justify-items: center;
+}
+
+.risk-donut {
+  display: grid;
+  width: min(230px, 100%);
+  aspect-ratio: 1;
+  place-items: center;
+  border-radius: 50%;
+  background: conic-gradient(var(--red) 0deg, var(--red) var(--red-deg), var(--amber) var(--red-deg), var(--amber) var(--amber-deg), var(--green) var(--amber-deg), var(--green) 360deg);
+  animation: popDonut 700ms ease-out both;
+}
+
+.risk-donut::after {
+  display: grid;
+  width: 58%;
+  aspect-ratio: 1;
+  place-items: center;
+  border-radius: 50%;
+  background: #ffffff;
+  color: var(--ink);
+  content: attr(data-label);
+  font-size: 26px;
+  font-weight: 800;
+}
+
+.risk-legend {
+  display: grid;
+  width: 100%;
+  gap: 8px;
+}
+
+.risk-legend p {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+  margin: 0;
+  color: var(--muted);
+  font-size: 13px;
+}
+
+.risk-legend strong {
+  color: var(--ink);
+}
+
+@keyframes growBar {
+  from {
+    transform: scaleX(0);
+  }
+
+  to {
+    transform: scaleX(1);
+  }
+}
+
+@keyframes popDonut {
+  from {
+    opacity: 0;
+    transform: scale(0.92) rotate(-18deg);
+  }
+
+  to {
+    opacity: 1;
+    transform: scale(1) rotate(0deg);
+  }
 }
 
 button:disabled {
@@ -571,7 +755,8 @@ pre {
     grid-template-columns: repeat(2, minmax(0, 1fr));
   }
 
-  .work-grid {
+  .work-grid,
+  .chart-grid {
     grid-template-columns: 1fr;
   }
 }
@@ -593,6 +778,12 @@ pre {
   }
 
   .top-actions {
+    align-items: stretch;
+    flex-direction: column;
+  }
+
+  .auth-panel,
+  .auth-gate {
     align-items: stretch;
     flex-direction: column;
   }
@@ -621,5 +812,13 @@ pre {
 
   .segmented {
     overflow-x: auto;
+  }
+
+  .bar-row {
+    grid-template-columns: 1fr;
+  }
+
+  .bar-row strong {
+    text-align: left;
   }
 }

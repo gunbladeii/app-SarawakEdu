@@ -3,6 +3,5 @@
 node_modules/
 README.md
 server.mjs
-supabase-schema.sql
-supabase-seed.sql
+supabase-*.sql
 *.log

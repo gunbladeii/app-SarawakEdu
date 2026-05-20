@@ -58,6 +58,8 @@ select
 from public.student_risks sr
 join public.schools s on s.code = sr.school_code;
 
+alter view public.dashboard_student_risks set (security_invoker = true);
+
 alter table public.schools enable row level security;
 alter table public.student_risks enable row level security;
 alter table public.intervention_channels enable row level security;

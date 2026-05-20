@@ -24,6 +24,7 @@
         <nav class="nav-list">
           <a href="#ringkasan" class="active">Ringkasan</a>
           <a href="#sekolah">Sekolah</a>
+          <a href="#carta">Carta</a>
           <a href="#murid">Murid Risiko</a>
           <a href="#intervensi">Intervensi</a>
           <a href="#mobile">Mobile & QR</a>
@@ -45,6 +46,11 @@
           </div>
           <div class="top-actions">
             <span id="dataSourceStatus" class="status-chip">Data lokal</span>
+            <div id="authPanel" class="auth-panel">
+              <span id="authUser" class="user-chip" hidden></span>
+              <button id="googleLoginBtn" class="secondary-action" type="button">Masuk Google</button>
+              <button id="logoutBtn" class="secondary-action" type="button" hidden>Keluar</button>
+            </div>
             <label class="search-field">
               <span>Cari</span>
               <input id="searchInput" type="search" placeholder="Sekolah atau murid">
@@ -57,6 +63,15 @@
             </select>
           </div>
         </header>
+
+        <section id="authGate" class="auth-gate" aria-live="polite">
+          <div>
+            <p class="eyebrow">Google Auth</p>
+            <h3 id="authGateTitle">Mod login sudah disediakan</h3>
+            <p id="authGateText">Aktifkan Google provider di Supabase untuk guna sign-up/login sebenar. Dashboard demo kekal boleh dibaca sementara kita lengkapkan polisi akses.</p>
+          </div>
+          <button id="googleLoginHeroBtn" class="primary-action" type="button">Masuk dengan Google</button>
+        </section>
 
         <section id="ringkasan" class="summary-grid" aria-label="Ringkasan daerah">
           <article class="metric">
@@ -79,6 +94,32 @@
             <strong id="attendanceAvg">0%</strong>
             <small>Purata 30 hari</small>
           </article>
+        </section>
+
+        <section id="carta" class="chart-grid" aria-labelledby="chart-title">
+          <section class="panel wide" aria-labelledby="chart-title">
+            <div class="panel-head">
+              <div>
+                <p class="eyebrow">Analitik daerah</p>
+                <h3 id="chart-title">Animasi prestasi sekolah</h3>
+              </div>
+              <span class="status-chip">Sasaran lulus 80%</span>
+            </div>
+            <div id="performanceChart" class="bar-chart"></div>
+          </section>
+
+          <section class="panel" aria-labelledby="risk-chart-title">
+            <div class="panel-head compact">
+              <div>
+                <p class="eyebrow">Komposisi risiko</p>
+                <h3 id="risk-chart-title">Lampu isyarat murid</h3>
+              </div>
+            </div>
+            <div class="donut-wrap">
+              <div id="riskDonut" class="risk-donut" role="img" aria-label="Carta komposisi risiko"></div>
+              <div id="riskLegend" class="risk-legend"></div>
+            </div>
+          </section>
         </section>
 
         <section class="work-grid">
@@ -203,7 +244,8 @@
       <pre id="summaryText"></pre>
     </dialog>
 
+    <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
     <script src="config.js?v=2"></script>
-    <script src="app.js?v=4"></script>
+    <script src="app.js?v=5"></script>
   </body>
 </html>
