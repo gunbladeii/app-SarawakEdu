@@ -1,4 +1,4 @@
-# SPM Watch Serian
+# MySPMCare Serian
 
 Prototaip awal aplikasi pemantauan prestasi SPM untuk 9 sekolah menengah di daerah Serian, Sarawak.
 
@@ -13,9 +13,9 @@ Prototaip awal aplikasi pemantauan prestasi SPM untuk 9 sekolah menengah di daer
 
 Status sekolah dikira daripada tiga isyarat awal:
 
-- Merah: ramalan lulus bawah 78%, kehadiran bawah 87%, atau kadar murid merah melebihi 10%.
-- Kuning: ramalan lulus bawah 84%, kehadiran bawah 91%, atau kadar murid merah melebihi 6.5%.
-- Hijau: berada pada landasan sasaran semasa.
+- Merah (Tindakan Segera): ramalan lulus bawah 78%, kehadiran bawah 87%, atau kadar murid merah melebihi 10%.
+- Kuning (Perlu Pemantauan): ramalan lulus bawah 84%, kehadiran bawah 91%, atau kadar murid merah melebihi 6.5%.
+- Hijau (Landasan kukuh): berada pada landasan sasaran semasa.
 
 Nilai ini boleh ditukar selepas bengkel bersama PPD dan sekolah.
 

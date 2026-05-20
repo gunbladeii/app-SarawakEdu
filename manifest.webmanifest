@@ -1,6 +1,6 @@
 {
-  "name": "SPM Watch Serian",
-  "short_name": "SPM Watch",
+  "name": "MySPMCare Serian",
+  "short_name": "MySPMCare",
   "description": "Pemantauan prestasi SPM Serian dengan pengesanan awal risiko dan intervensi.",
   "start_url": "./index.html",
   "scope": "./",
