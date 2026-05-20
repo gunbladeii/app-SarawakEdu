@@ -15,7 +15,7 @@ let students = [
   { name: "Daniel A.", school: "SMK Sadong Jaya", risk: "red", issue: "Tidak capai lulus Sejarah", intervention: "Kelas pemulihan mikro + pemantauan mingguan" },
   { name: "Rizal J.", school: "SMK Balai Ringin", risk: "red", issue: "Ponteng berselang dan Matematik E", intervention: "Ziarah cakna bersama ketua kaum" },
   { name: "Nur F.", school: "SMK Taee", risk: "amber", issue: "Markah Sains menurun 12 mata", intervention: "Latih tubi terarah 4 minggu" },
-  { name: "Brandon M.", school: "SMK Tebedu", risk: "amber", issue: "Kehadiran 86% dan BI rendah", intervention: "Buddy support + latihan lisan" },
+  { name: "Brandon M.", school: "SMK Tebedu", risk: "amber", issue: "Kehadiran 86% dan BI rendah", intervention: "Sokongan rakan sebaya + latihan lisan" },
   { name: "Siti R.", school: "SMK Serian", risk: "amber", issue: "GPA sasaran tergelincir", intervention: "Klinik subjek dan semakan target" },
   { name: "Aaron K.", school: "SMK Tarat", risk: "green", issue: "Perlu kekalkan momentum", intervention: "Set pengayaan SPM" }
 ];
@@ -44,6 +44,16 @@ let scanFrameId = null;
 let qrDetector = null;
 let supabaseClient = null;
 let activeSession = null;
+
+const dataSourceMessages = {
+  local: "Data contoh",
+  loginRequired: "Sila masuk",
+  syncing: "Mengemas kini",
+  empty: "Data belum tersedia",
+  live: "Data terkini",
+  denied: "Akses tidak dibenarkan",
+  fallback: "Data contoh"
+};
 
 function renderIcons() {
   if (window.lucide?.createIcons) {
@@ -187,17 +197,17 @@ async function loadDashboardData() {
   const config = getSupabaseConfig();
 
   if (!hasSupabaseConfig(config)) {
-    setDataSourceStatus("Data lokal");
+    setDataSourceStatus(dataSourceMessages.local);
     return;
   }
 
   if (config.requireAuth && !activeSession) {
     clearDashboardData();
-    setDataSourceStatus("Perlu login");
+    setDataSourceStatus(dataSourceMessages.loginRequired);
     return;
   }
 
-  setDataSourceStatus("Sync Supabase");
+  setDataSourceStatus(dataSourceMessages.syncing);
 
   try {
     const [schoolRows, studentRows, interventionRows] = await Promise.all([
@@ -213,7 +223,7 @@ async function loadDashboardData() {
     ]);
 
     if (schoolRows.length === 0) {
-      setDataSourceStatus("Supabase kosong");
+      setDataSourceStatus(dataSourceMessages.empty);
       return;
     }
 
@@ -221,15 +231,15 @@ async function loadDashboardData() {
     if (studentRows.length > 0) students = studentRows.map(mapStudentRow);
     if (interventionRows.length > 0) interventions = interventionRows.map(mapInterventionRow);
 
-    setDataSourceStatus("Supabase live");
+    setDataSourceStatus(dataSourceMessages.live);
   } catch (error) {
     console.warn(error);
     if (config.requireAuth) {
       clearDashboardData();
-      setDataSourceStatus("Akses ditolak");
+      setDataSourceStatus(dataSourceMessages.denied);
       return;
     }
-    setDataSourceStatus("Fallback lokal");
+    setDataSourceStatus(dataSourceMessages.fallback);
   }
 }
 
@@ -304,30 +314,30 @@ function updateAuthUi(session) {
     sidebarLoginBtn.hidden = true;
     heroLoginBtn.hidden = true;
     logoutBtn.hidden = false;
-    authGateTitle.textContent = "Login Google aktif";
-    authGateText.textContent = `Masuk sebagai ${label}. Data Supabase akan dibaca menggunakan session pengguna ini.`;
+    authGateTitle.textContent = "Akses pengguna aktif";
+    authGateText.textContent = `Masuk sebagai ${label}. Paparan ini menunjukkan maklumat yang dibenarkan untuk akaun ini.`;
     return;
   }
 
   sidebarProfile.classList.add("guest");
   profilePhoto.onerror = null;
   showProfileInitial(profilePhoto, profileInitial, "Google");
-  profileName.textContent = "Google Login";
-  profileEmail.textContent = "Sila masuk untuk akses dashboard";
+  profileName.textContent = "Masuk Google";
+  profileEmail.textContent = "Sila masuk untuk melihat paparan";
   sidebarLoginBtn.hidden = false;
   heroLoginBtn.hidden = false;
   logoutBtn.hidden = true;
-  authGateTitle.textContent = config.requireAuth ? "Login Google diperlukan" : "Mod login sudah disediakan";
+  authGateTitle.textContent = config.requireAuth ? "Sila masuk untuk melihat maklumat" : "Akses masuk sedang disediakan";
   authGateText.textContent = config.requireAuth
-    ? "Dashboard production dikunci. Sila masuk menggunakan akaun Google yang dibenarkan."
-    : "Aktifkan Google provider di Supabase untuk guna sign-up/login sebenar. Dashboard demo kekal boleh dibaca sementara kita lengkapkan polisi akses.";
+    ? "Maklumat ini dilindungi. Sila masuk menggunakan akaun Google yang dibenarkan."
+    : "Paparan contoh boleh digunakan sementara akses pengguna dilengkapkan.";
 }
 
 async function signInWithGoogle() {
   const client = getSupabaseClient();
 
   if (!client) {
-    window.alert("Supabase client belum tersedia. Semak config.js dan sambungan internet.");
+    window.alert("Akses masuk belum dapat digunakan. Sila maklumkan kepada pentadbir sistem.");
     return;
   }
 
@@ -335,14 +345,14 @@ async function signInWithGoogle() {
     provider: "google",
     options: {
       queryParams: {
-        prompt: "select_account"
+      prompt: "select_account"
       },
       redirectTo: getRedirectUrl()
     }
   });
 
   if (error) {
-    window.alert(`Google login gagal: ${error.message}`);
+    window.alert("Log masuk Google tidak berjaya. Sila cuba sekali lagi.");
   }
 }
 
@@ -494,8 +504,8 @@ function renderSchools(filteredSchools) {
             <div><span>Lulus</span><strong>${school.pass}%</strong></div>
             <div><span>Hadir</span><strong>${school.attendance}%</strong></div>
           </div>
-          <p>GPA ${school.gpa.toFixed(2)}. Subjek kritikal: <strong>${school.subject}</strong>.</p>
-          <p>${school.red} merah, ${school.amber} kuning memerlukan tindak susul.</p>
+          <p>Purata gred ${school.gpa.toFixed(2)}. Subjek yang perlu diberi perhatian: <strong>${school.subject}</strong>.</p>
+          <p>${school.red} murid Merah dan ${school.amber} murid Kuning memerlukan tindak susul.</p>
         </article>
       `;
     })
@@ -512,8 +522,8 @@ function renderDrivers() {
     },
     {
       icon: "book-open",
-      title: "Subjek teras kritikal",
-      detail: "BM, Sejarah dan Matematik menjadi isyarat awal risiko gagal SPM."
+      title: "Subjek teras perlu perhatian",
+      detail: "Bahasa Melayu, Sejarah dan Matematik menjadi isyarat awal risiko gagal SPM."
     },
     {
       icon: "trending-down",
@@ -523,7 +533,7 @@ function renderDrivers() {
     {
       icon: "map-pin",
       title: "Kes komuniti",
-      detail: "Kes kehadiran merah wajar melibatkan ibu bapa, ketua kaum dan penghulu."
+      detail: "Kes kehadiran kategori Merah wajar melibatkan ibu bapa, ketua kaum dan penghulu."
     }
   ];
 
@@ -592,12 +602,12 @@ function buildSummaryText() {
   return [
     "RINGKASAN TINDAKAN DAERAH SERIAN",
     "",
-    `Sekolah merah: ${redSchools.map((school) => school.name).join(", ")}`,
-    `Murid risiko merah contoh: ${redStudents.map((student) => student.name).join(", ")}`,
+    `Sekolah memerlukan tindakan segera: ${redSchools.map((school) => school.name).join(", ")}`,
+    `Contoh murid yang memerlukan tindakan segera: ${redStudents.map((student) => student.name).join(", ")}`,
     "",
     "Keutamaan 7 hari:",
     "1. Sahkan data kehadiran dan markah terkini setiap sekolah.",
-    "2. Laksana kelas mikro BM, Sejarah dan Matematik untuk murid merah.",
+    "2. Laksana kelas bimbingan berfokus Bahasa Melayu, Sejarah dan Matematik untuk murid kategori Merah.",
     "3. Atur libat urus ibu bapa bagi murid ponteng atau gagal subjek teras.",
     "4. Rujuk kes kehadiran kritikal kepada ketua kaum/penghulu untuk ziarah komuniti.",
     "5. Bentang status kepada PPD dan pemegang taruh untuk sokongan logistik."
@@ -637,20 +647,25 @@ async function checkCameraSupport() {
   const hasBarcodeDetector = "BarcodeDetector" in window;
 
   if (!hasMediaDevices) {
-    setCameraStatus("Browser ini belum menyokong akses kamera melalui web.");
+    setCameraStatus("Peranti atau pelayar ini belum dapat membuka kamera.");
     return;
   }
 
   if (!isLocalOrSecure) {
-    setCameraStatus("Kamera web memerlukan HTTPS atau localhost.");
+    setCameraStatus("Kamera hanya boleh digunakan melalui pautan rasmi yang selamat.");
+    return;
+  }
+
+  if (permission === "ditolak") {
+    setCameraStatus("Kamera belum boleh digunakan kerana kebenaran tidak diberikan. Benarkan kamera pada tetapan peranti, kemudian cuba semula.");
     return;
   }
 
   const qrStatus = hasBarcodeDetector
-    ? "QR scanner native disokong."
-    : "Engine QR native tiada; boleh tambah library QR kemudian.";
+    ? "Kamera sedia digunakan untuk imbasan QR."
+    : "Kamera sedia digunakan. Bacaan QR penuh akan diaktifkan dalam fasa seterusnya.";
 
-  setCameraStatus(`Kamera disokong. Permission: ${permission}. ${qrStatus}`);
+  setCameraStatus(`Kamera boleh digunakan. Kebenaran kamera: ${permission}. ${qrStatus}`);
 }
 
 async function scanQrFrame(video) {
@@ -666,7 +681,7 @@ async function scanQrFrame(video) {
       }
     }
   } catch (error) {
-    setCameraStatus("Kamera aktif, tetapi bacaan QR native gagal pada browser ini.");
+    setCameraStatus("Kamera aktif, tetapi bacaan QR belum dapat diproses pada peranti ini.");
   }
 
   scanFrameId = requestAnimationFrame(() => scanQrFrame(video));
@@ -674,7 +689,7 @@ async function scanQrFrame(video) {
 
 async function startCamera() {
   if (!navigator.mediaDevices?.getUserMedia) {
-    setCameraStatus("Browser ini tidak membenarkan akses kamera melalui web.");
+    setCameraStatus("Peranti ini belum membenarkan kamera digunakan melalui aplikasi ini.");
     return;
   }
 
@@ -699,15 +714,15 @@ async function startCamera() {
 
     if ("BarcodeDetector" in window) {
       qrDetector = new window.BarcodeDetector({ formats: ["qr_code"] });
-      setCameraStatus("Kamera aktif. Halakan kepada QR code untuk ujian awal.");
+      setCameraStatus("Kamera aktif. Halakan kamera kepada kod QR untuk ujian awal.");
       scanQrFrame(video);
     } else {
-      setCameraStatus("Kamera aktif. Modul permission sudah ready; engine QR akan ditambah dalam fasa seterusnya.");
+      setCameraStatus("Kamera aktif. Bacaan QR penuh akan diaktifkan dalam fasa seterusnya.");
     }
   } catch (error) {
     const message = error.name === "NotAllowedError"
-      ? "Permission kamera ditolak. Benarkan kamera pada setting browser untuk guna imbas QR."
-      : "Kamera tidak dapat dibuka pada device/browser ini.";
+      ? "Kebenaran kamera tidak diberikan. Benarkan kamera pada tetapan pelayar untuk menggunakan imbasan QR."
+      : "Kamera tidak dapat dibuka pada peranti ini.";
     setCameraStatus(message);
     setScannerState(false);
   }
@@ -736,27 +751,27 @@ function initPwaStatus() {
   const isStandalone = window.matchMedia("(display-mode: standalone)").matches || window.navigator.standalone;
 
   if (isStandalone) {
-    pwaStatus.textContent = "Installed";
+    pwaStatus.textContent = "Telah dipasang";
     return;
   }
 
   if (!("serviceWorker" in navigator)) {
-    pwaStatus.textContent = "Web only";
+    pwaStatus.textContent = "Sedia digunakan";
     return;
   }
 
   if (!window.isSecureContext && location.hostname !== "localhost" && location.hostname !== "127.0.0.1") {
-    pwaStatus.textContent = "Perlu HTTPS";
+    pwaStatus.textContent = "Perlu pautan selamat";
     return;
   }
 
   navigator.serviceWorker
     .register("./sw.js")
     .then(() => {
-      pwaStatus.textContent = "PWA-ready";
+      pwaStatus.textContent = "Sedia dipasang";
     })
     .catch(() => {
-      pwaStatus.textContent = "Web ready";
+      pwaStatus.textContent = "Sedia digunakan";
     });
 }
 

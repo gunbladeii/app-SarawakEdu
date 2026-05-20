@@ -4,7 +4,7 @@
     <meta charset="utf-8">
     <meta name="viewport" content="width=device-width, initial-scale=1">
     <meta name="theme-color" content="#191b33">
-    <meta name="description" content="MySPMCare Serian: dashboard pemantauan prestasi SPM dengan pengesanan awal risiko dan intervensi.">
+    <meta name="description" content="MySPMCare Serian: sistem pemantauan prestasi SPM dengan pengesanan awal risiko dan intervensi.">
     <title>MySPMCare Serian</title>
     <link rel="manifest" href="manifest.webmanifest">
     <link rel="icon" href="icon.svg" type="image/svg+xml">
@@ -29,8 +29,8 @@
             <span id="profileInitial" class="profile-initial">G</span>
             <span class="profile-status" aria-hidden="true"></span>
           </div>
-          <strong id="profileName">Google Login</strong>
-          <span id="profileEmail">Sila masuk untuk akses dashboard</span>
+          <strong id="profileName">Masuk Google</strong>
+          <span id="profileEmail">Sila masuk untuk melihat paparan</span>
           <button id="sidebarLoginBtn" class="sidebar-login" type="button">Masuk Google</button>
           <button id="logoutBtn" class="sidebar-logout" type="button" hidden>Keluar</button>
         </section>
@@ -39,9 +39,9 @@
           <a href="#ringkasan" class="active"><span class="nav-icon" data-lucide="layout-dashboard"></span><span>Ringkasan</span></a>
           <a href="#sekolah"><span class="nav-icon" data-lucide="school"></span><span>Sekolah</span></a>
           <a href="#carta"><span class="nav-icon" data-lucide="chart-no-axes-combined"></span><span>Carta</span></a>
-          <a href="#murid"><span class="nav-icon" data-lucide="user-x"></span><span>Murid Risiko</span></a>
+          <a href="#murid"><span class="nav-icon" data-lucide="user-x"></span><span>Murid Berisiko</span></a>
           <a href="#intervensi"><span class="nav-icon" data-lucide="handshake"></span><span>Intervensi</span></a>
-          <a href="#mobile"><span class="nav-icon" data-lucide="qr-code"></span><span>Mobile & QR</span></a>
+          <a href="#mobile"><span class="nav-icon" data-lucide="qr-code"></span><span>Aplikasi & QR</span></a>
         </nav>
 
         <section class="legend" aria-labelledby="legend-title">
@@ -62,7 +62,7 @@
             </h2>
           </div>
           <div class="top-actions">
-            <span id="dataSourceStatus" class="status-chip">Data lokal</span>
+            <span id="dataSourceStatus" class="status-chip">Data contoh</span>
             <label class="search-field">
               <span>Cari</span>
               <input id="searchInput" type="search" placeholder="Sekolah atau murid">
@@ -79,9 +79,9 @@
         <section id="authGate" class="auth-gate" aria-live="polite">
           <span class="auth-icon" data-lucide="shield-check" aria-hidden="true"></span>
           <div>
-            <p class="eyebrow">Google Auth</p>
-            <h3 id="authGateTitle">Mod login sudah disediakan</h3>
-            <p id="authGateText">Aktifkan Google provider di Supabase untuk guna sign-up/login sebenar. Dashboard demo kekal boleh dibaca sementara kita lengkapkan polisi akses.</p>
+            <p class="eyebrow">Akses pengguna</p>
+            <h3 id="authGateTitle">Sila masuk untuk melihat maklumat</h3>
+            <p id="authGateText">Maklumat ini dilindungi. Sila masuk menggunakan akaun Google yang dibenarkan.</p>
           </div>
           <button id="googleLoginHeroBtn" class="primary-action" type="button">Masuk dengan Google</button>
         </section>
@@ -98,7 +98,7 @@
             <small>Perlu intervensi segera</small>
           </article>
           <article class="metric">
-            <div class="metric-top"><span class="metric-icon" data-lucide="trending-up"></span><span>Lulus Ramalan</span></div>
+            <div class="metric-top"><span class="metric-icon" data-lucide="trending-up"></span><span>Ramalan Lulus</span></div>
             <strong id="passForecast">0%</strong>
             <small>Berdasarkan trend semasa</small>
           </article>
@@ -113,8 +113,8 @@
           <section class="panel wide" aria-labelledby="chart-title">
             <div class="panel-head">
               <div>
-                <p class="eyebrow">Analitik daerah</p>
-                <h3 id="chart-title">Animasi prestasi sekolah</h3>
+                <p class="eyebrow">Ringkasan daerah</p>
+                <h3 id="chart-title">Prestasi sekolah</h3>
               </div>
               <span class="status-chip">Sasaran lulus 80%</span>
             </div>
@@ -124,7 +124,7 @@
           <section class="panel" aria-labelledby="risk-chart-title">
             <div class="panel-head compact">
               <div>
-                <p class="eyebrow">Komposisi risiko</p>
+                <p class="eyebrow">Pecahan risiko</p>
                 <h3 id="risk-chart-title">Lampu isyarat murid</h3>
               </div>
             </div>
@@ -139,7 +139,7 @@
           <section id="sekolah" class="panel wide" aria-labelledby="schools-title">
             <div class="panel-head">
               <div>
-                <p class="eyebrow">Papan pemuka sekolah</p>
+                <p class="eyebrow">Paparan sekolah</p>
                 <h3 id="schools-title">Status 9 SM Daerah Serian</h3>
               </div>
               <div class="segmented" role="group" aria-label="Paparan">
@@ -205,7 +205,7 @@
                 <p class="eyebrow">Panduan program</p>
                 <h3 id="mobile-title">Objektif MySPMCare dalam intervensi awal</h3>
               </div>
-              <span id="pwaStatus" class="status-chip">Menyemak</span>
+              <span id="pwaStatus" class="status-chip">Sedia digunakan</span>
             </div>
             <div class="device-grid">
               <div class="device-item">
@@ -226,7 +226,7 @@
           <section class="panel scanner-panel" aria-labelledby="scanner-title">
             <div class="panel-head compact">
               <div>
-                <p class="eyebrow">Add-on QR</p>
+                <p class="eyebrow">Imbasan QR</p>
                 <h3 id="scanner-title">Imbas QR</h3>
               </div>
             </div>
@@ -234,15 +234,15 @@
               <video id="cameraPreview" playsinline muted></video>
               <div id="cameraPlaceholder" class="camera-placeholder">
                 <strong>Kamera belum dibuka</strong>
-                <span>Tekan butang kamera untuk beri permission.</span>
+                <span>Tekan Buka kamera dan benarkan penggunaan kamera apabila diminta.</span>
               </div>
             </div>
             <div class="scanner-actions">
-              <button id="cameraCheckBtn" class="secondary-action" type="button">Semak support</button>
+              <button id="cameraCheckBtn" class="secondary-action" type="button">Semak kamera</button>
               <button id="cameraStartBtn" class="primary-action" type="button">Buka kamera</button>
               <button id="cameraStopBtn" class="secondary-action" type="button" disabled>Tutup</button>
             </div>
-            <p id="cameraStatus" class="camera-status">Status kamera belum disemak.</p>
+            <p id="cameraStatus" class="camera-status">Kamera belum disemak.</p>
             <div id="qrResult" class="qr-result" hidden></div>
           </section>
         </section>
@@ -260,6 +260,6 @@
     <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
     <script src="https://unpkg.com/lucide@latest/dist/umd/lucide.min.js"></script>
     <script src="config.js?v=3"></script>
-    <script src="app.js?v=11"></script>
+    <script src="app.js?v=13"></script>
   </body>
 </html>
