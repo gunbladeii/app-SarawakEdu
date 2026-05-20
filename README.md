@@ -190,7 +190,9 @@ Contoh route:
 ```text
 GET /api/oracle-reference?scope=summary
 GET /api/oracle-reference?scope=schools
-GET /api/oracle-reference?scope=students&kod_sekolah=KODSEKOLAH
+GET /api/oracle-reference?scope=classes&kod_sekolah=KODSEKOLAH
+GET /api/oracle-reference?scope=enrolment&kod_sekolah=KODSEKOLAH
+GET /api/oracle-reference?scope=students&kod_sekolah=KODSEKOLAH&spm_only=1
 ```
 
 Nota keselamatan: route ini memerlukan bearer token Supabase pengguna. Untuk ujian local tanpa login, boleh set `ORACLE_REFERENCE_REQUIRE_AUTH=false`, tetapi jangan guna tetapan itu di production.
