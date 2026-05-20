@@ -45,6 +45,33 @@ let qrDetector = null;
 let supabaseClient = null;
 let activeSession = null;
 
+function renderIcons() {
+  if (window.lucide?.createIcons) {
+    try {
+      window.lucide.createIcons({
+        attrs: {
+          "aria-hidden": "true",
+          "stroke-width": 2
+        }
+      });
+    } catch (error) {
+      console.warn("Lucide icons could not be rendered.", error);
+    }
+  }
+}
+
+function setTodayLabel() {
+  const label = document.querySelector("#todayLabel");
+  if (!label) return;
+
+  label.textContent = new Intl.DateTimeFormat("ms-MY", {
+    weekday: "short",
+    day: "2-digit",
+    month: "short",
+    year: "numeric"
+  }).format(new Date());
+}
+
 function setDataSourceStatus(message) {
   const element = document.querySelector("#dataSourceStatus");
   if (element) element.textContent = message;
@@ -479,25 +506,36 @@ function renderSchools(filteredSchools) {
 function renderDrivers() {
   const drivers = [
     {
+      icon: "calendar-x",
       title: "Kehadiran bawah 87%",
       detail: `${schools.filter((school) => school.attendance < 87).length} sekolah perlu pemantauan harian.`
     },
     {
+      icon: "book-open",
       title: "Subjek teras kritikal",
       detail: "BM, Sejarah dan Matematik menjadi isyarat awal risiko gagal SPM."
     },
     {
+      icon: "trending-down",
       title: "Jurang ramalan lulus",
       detail: `${schools.filter((school) => school.pass < 80).length} sekolah di bawah paras sasaran daerah 80%.`
     },
     {
+      icon: "map-pin",
       title: "Kes komuniti",
       detail: "Kes kehadiran merah wajar melibatkan ibu bapa, ketua kaum dan penghulu."
     }
   ];
 
   document.querySelector("#driverList").innerHTML = drivers
-    .map((driver) => `<div class="driver-item"><strong>${driver.title}</strong><span>${driver.detail}</span></div>`)
+    .map(
+      (driver) => `
+        <div class="driver-item">
+          <span class="item-icon" data-lucide="${driver.icon}"></span>
+          <div><strong>${driver.title}</strong><span>${driver.detail}</span></div>
+        </div>
+      `
+    )
     .join("");
 }
 
@@ -521,13 +559,14 @@ function renderStudents(filteredStudents) {
 }
 
 function renderInterventions() {
+  const icons = ["school", "users-round", "map-pin", "landmark"];
   document.querySelector("#interventionStack").innerHTML = interventions.length
     ? interventions
     .map(
-      (item) => `
+      (item, index) => `
         <div class="intervention-item">
-          <strong>${item.owner}</strong>
-          <span>${item.action}</span>
+          <span class="item-icon" data-lucide="${icons[index] || "handshake"}"></span>
+          <div><strong>${item.owner}</strong><span>${item.action}</span></div>
         </div>
       `
     )
@@ -543,6 +582,7 @@ function renderAll() {
   renderDrivers();
   renderStudents(filteredStudents);
   renderInterventions();
+  renderIcons();
 }
 
 function buildSummaryText() {
@@ -737,6 +777,8 @@ document.querySelector("#googleLoginHeroBtn").addEventListener("click", signInWi
 document.querySelector("#logoutBtn").addEventListener("click", signOut);
 
 async function initApp() {
+  setTodayLabel();
+  renderIcons();
   await initAuth();
   await loadDashboardData();
   renderAll();

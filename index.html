@@ -3,18 +3,20 @@
   <head>
     <meta charset="utf-8">
     <meta name="viewport" content="width=device-width, initial-scale=1">
-    <meta name="theme-color" content="#0f172a">
+    <meta name="theme-color" content="#191b33">
     <meta name="description" content="Dashboard pemantauan prestasi SPM Serian dengan pengesanan awal risiko dan intervensi.">
     <title>Pemantauan SPM Serian</title>
     <link rel="manifest" href="manifest.webmanifest">
     <link rel="icon" href="icon.svg" type="image/svg+xml">
-    <link rel="stylesheet" href="styles.css?v=7">
+    <link rel="stylesheet" href="styles.css?v=8">
   </head>
   <body>
     <div class="app-shell">
       <aside class="sidebar" aria-label="Navigasi utama">
         <div class="brand">
-          <div class="brand-mark" aria-hidden="true">S</div>
+          <div class="brand-mark" aria-hidden="true">
+            <span data-lucide="graduation-cap"></span>
+          </div>
           <div>
             <p class="eyebrow">Daerah Serian</p>
             <h1>SPM Watch</h1>
@@ -34,12 +36,12 @@
         </section>
 
         <nav class="nav-list">
-          <a href="#ringkasan" class="active">Ringkasan</a>
-          <a href="#sekolah">Sekolah</a>
-          <a href="#carta">Carta</a>
-          <a href="#murid">Murid Risiko</a>
-          <a href="#intervensi">Intervensi</a>
-          <a href="#mobile">Mobile & QR</a>
+          <a href="#ringkasan" class="active"><span class="nav-icon" data-lucide="layout-dashboard"></span><span>Ringkasan</span></a>
+          <a href="#sekolah"><span class="nav-icon" data-lucide="school"></span><span>Sekolah</span></a>
+          <a href="#carta"><span class="nav-icon" data-lucide="chart-no-axes-combined"></span><span>Carta</span></a>
+          <a href="#murid"><span class="nav-icon" data-lucide="user-x"></span><span>Murid Risiko</span></a>
+          <a href="#intervensi"><span class="nav-icon" data-lucide="handshake"></span><span>Intervensi</span></a>
+          <a href="#mobile"><span class="nav-icon" data-lucide="qr-code"></span><span>Mobile & QR</span></a>
         </nav>
 
         <section class="legend" aria-labelledby="legend-title">
@@ -52,7 +54,8 @@
 
       <main>
         <header class="topbar">
-          <div>
+          <div class="top-title">
+            <span id="todayLabel" class="date-chip">Hari ini</span>
             <p class="eyebrow">Sistem pengesanan awal risiko cicir</p>
             <h2>Pemantauan prestasi SPM secara real time</h2>
           </div>
@@ -72,6 +75,7 @@
         </header>
 
         <section id="authGate" class="auth-gate" aria-live="polite">
+          <span class="auth-icon" data-lucide="shield-check" aria-hidden="true"></span>
           <div>
             <p class="eyebrow">Google Auth</p>
             <h3 id="authGateTitle">Mod login sudah disediakan</h3>
@@ -82,22 +86,22 @@
 
         <section id="ringkasan" class="summary-grid" aria-label="Ringkasan daerah">
           <article class="metric">
-            <span>Calon SPM</span>
+            <div class="metric-top"><span class="metric-icon" data-lucide="users"></span><span>Calon SPM</span></div>
             <strong id="totalCandidates">0</strong>
             <small>9 sekolah menengah</small>
           </article>
           <article class="metric">
-            <span>Risiko Merah</span>
+            <div class="metric-top"><span class="metric-icon" data-lucide="siren"></span><span>Risiko Merah</span></div>
             <strong id="redCount">0</strong>
             <small>Perlu intervensi segera</small>
           </article>
           <article class="metric">
-            <span>Lulus Ramalan</span>
+            <div class="metric-top"><span class="metric-icon" data-lucide="trending-up"></span><span>Lulus Ramalan</span></div>
             <strong id="passForecast">0%</strong>
             <small>Berdasarkan trend semasa</small>
           </article>
           <article class="metric">
-            <span>Kehadiran</span>
+            <div class="metric-top"><span class="metric-icon" data-lucide="calendar-check"></span><span>Kehadiran</span></div>
             <strong id="attendanceAvg">0%</strong>
             <small>Purata 30 hari</small>
           </article>
@@ -252,7 +256,8 @@
     </dialog>
 
     <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+    <script src="https://unpkg.com/lucide@latest/dist/umd/lucide.min.js"></script>
     <script src="config.js?v=3"></script>
-    <script src="app.js?v=10"></script>
+    <script src="app.js?v=11"></script>
   </body>
 </html>
