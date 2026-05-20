@@ -1,6 +1,7 @@
 .git/
 .vercel/
 node_modules/
+.env.example
 README.md
 server.mjs
 supabase-*.sql

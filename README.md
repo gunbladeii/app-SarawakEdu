@@ -62,7 +62,7 @@ Untuk pangkalan data sedia ada, jalankan `supabase-gps-lms-migration.sql` dahulu
 ## Fasa Seterusnya
 
 1. Sahkan senarai 9 sekolah dan format data sebenar.
-2. Tukar data contoh dalam `app.js` kepada import CSV/Google Sheet.
+2. Sambungkan paparan dashboard kepada data rujukan sekolah dan murid daripada `/api/oracle-reference`.
 3. Tambah login berperanan: PPD, pengetua, guru kanan, guru kelas dan pegawai intervensi.
 4. Simpan rekod intervensi dan status tindakan susulan.
 5. Bina laporan daerah, sekolah dan murid untuk mesyuarat berkala.
@@ -152,6 +152,50 @@ Frontend akan cuba baca data daripada Supabase melalui REST API:
 - `intervention_channels`
 
 Jika `config.js` belum diisi atau Supabase gagal dicapai, dashboard akan fallback kepada data lokal supaya demo masih berjalan.
+
+## Integrasi Data Murid dan Sekolah
+
+MySPMCare kini menyediakan route server-side `GET /api/oracle-reference` sebagai pintu selamat untuk membaca data rujukan sekolah dan murid daripada API eNazir Oracle. Kunci API tidak diletakkan di browser.
+
+Flow yang dicadangkan:
+
+1. Pengguna login Google melalui Supabase Auth.
+2. Frontend meminta data rujukan daripada `/api/oracle-reference`.
+3. Server menyemak session login pengguna.
+4. Server memanggil API eNazir Oracle menggunakan kunci yang disimpan di environment server.
+5. Data yang dipulangkan dihadkan kepada sekolah sasaran PPD Serian.
+6. Supabase kekal digunakan untuk rekod kerja seperti status risiko, GPS/LMS, intervensi dan tindakan susulan.
+
+Environment yang diperlukan di Vercel atau local:
+
+```bash
+ENAZIR_ORACLE_API_KEY=...
+ENAZIR_PPD_CODE=...
+ENAZIR_ALLOWED_SCHOOL_CODES=...
+ENAZIR_SCHOOL_LEVEL=menengah
+ENAZIR_MAX_STUDENT_SCHOOLS=12
+ORACLE_REFERENCE_REQUIRE_AUTH=true
+ORACLE_REFERENCE_ALLOWED_EMAILS=
+SUPABASE_URL=https://PROJECT_ID.supabase.co
+SUPABASE_ANON_KEY=...
+```
+
+Gunakan salah satu cara untuk mengehadkan data Serian:
+
+- `ENAZIR_ALLOWED_SCHOOL_CODES`: pilihan paling jimat kerana sistem hanya memanggil sekolah yang disenaraikan.
+- `ENAZIR_PPD_CODE`: sistem mencari sekolah dalam kod PPD tersebut dan menapis kepada sekolah menengah.
+
+Contoh route:
+
+```text
+GET /api/oracle-reference?scope=summary
+GET /api/oracle-reference?scope=schools
+GET /api/oracle-reference?scope=students&kod_sekolah=KODSEKOLAH
+```
+
+Nota keselamatan: route ini memerlukan bearer token Supabase pengguna. Untuk ujian local tanpa login, boleh set `ORACLE_REFERENCE_REQUIRE_AUTH=false`, tetapi jangan guna tetapan itu di production.
+
+Jika mahu hadkan kepada akaun tertentu sahaja, isi `ORACLE_REFERENCE_ALLOWED_EMAILS` dengan senarai email yang dipisahkan koma.
 
 ## Carta Animasi
 

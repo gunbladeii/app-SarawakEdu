@@ -2,6 +2,9 @@
   "name": "app-sarawakedu",
   "version": "0.1.0",
   "private": true,
+  "engines": {
+    "node": "22.x"
+  },
   "scripts": {
     "start": "node server.mjs",
     "deploy": "vercel",

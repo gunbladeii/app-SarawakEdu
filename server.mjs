@@ -1,6 +1,7 @@
 import { createReadStream, existsSync, statSync } from "node:fs";
 import { createServer } from "node:http";
 import { extname, join, normalize, resolve } from "node:path";
+import { handleOracleReferenceRequest } from "./lib/oracle-reference.mjs";
 
 const root = resolve(process.cwd());
 const port = Number(process.env.PORT || 8080);
@@ -25,6 +26,18 @@ function resolvePath(url) {
 }
 
 createServer((request, response) => {
+  const pathname = new URL(request.url, `http://${host}:${port}`).pathname;
+
+  if (pathname === "/api/oracle-reference") {
+    handleOracleReferenceRequest(request, response).catch(() => {
+      if (!response.headersSent) {
+        response.writeHead(500, { "content-type": "application/json; charset=utf-8" });
+      }
+      response.end(JSON.stringify({ success: false, message: "Ralat tidak dijangka." }));
+    });
+    return;
+  }
+
   const filePath = resolvePath(request.url);
 
   if (!filePath || !existsSync(filePath) || statSync(filePath).isDirectory()) {
@@ -38,5 +51,5 @@ createServer((request, response) => {
   });
   createReadStream(filePath).pipe(response);
 }).listen(port, host, () => {
-  console.log(`SPM Watch Serian running at http://${host}:${port}`);
+  console.log(`MySPMCare Serian running at http://${host}:${port}`);
 });
