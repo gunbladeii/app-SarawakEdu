@@ -67,6 +67,23 @@ Untuk pangkalan data sedia ada, jalankan `supabase-gps-lms-migration.sql` dahulu
 4. Simpan rekod intervensi dan status tindakan susulan.
 5. Bina laporan daerah, sekolah dan murid untuk mesyuarat berkala.
 
+## Flow Data Entry Sebenar
+
+Rangka kerja data entry sebenar disediakan dalam:
+
+- `DATA_ENTRY_FLOW.md` - aliran kerja, peranan akses dan prinsip simpanan data.
+- `supabase-real-data-schema.sql` - table baharu untuk rekod sebenar, kawalan akses dan view dashboard.
+- `templates/student-monitoring-template.csv` - template awal untuk muat naik data sekolah.
+
+Cadangan flow:
+
+1. Data sekolah dan murid dibaca daripada API rujukan.
+2. Supabase menyimpan rekod kerja sahaja: markah, LMS, GPS, risiko, intervensi dan status semakan.
+3. Setiap kemasukan data diikat kepada satu kitaran pemantauan seperti `Percubaan SPM 2026`.
+4. Dashboard daerah membaca view `dashboard_real_school_metrics` dan `dashboard_real_student_risks` selepas data disahkan.
+
+Table dummy sedia ada (`schools` dan `student_risks`) masih dikekalkan sementara UI belum dipindahkan kepada flow sebenar.
+
 ## Cadangan Tech Stack
 
 Untuk sasaran universal di laptop, desktop dan telefon, pendekatan paling sesuai ialah web app responsif + PWA.

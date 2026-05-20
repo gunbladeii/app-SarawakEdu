@@ -1,0 +1,2 @@
+cycle_code,school_code,student_code,class_id,class_name,form_code,attendance_rate,bm_score,bm_grade,bm_pass,sejarah_score,sejarah_grade,sejarah_pass,current_gpa,target_gpa,critical_subject,gps_quality_need,gps_quantity_need,risk,issue_note,intervention_action,intervention_owner,due_date
+SPM-2026-PERCUBAAN,YEB8205,CONTOH001,1056231,5 BIJAK,15,92,58,C,true,62,C,true,5.20,4.80,Matematik,true,false,amber,Perlu naikkan markah Matematik,Klinik subjek mingguan,Guru Matematik,2026-06-15
