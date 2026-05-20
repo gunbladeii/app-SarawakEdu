@@ -1,13 +1,13 @@
 let schools = [
-  { name: "SMK Serian", candidates: 218, pass: 88, attendance: 94, gpa: 4.91, red: 11, amber: 28, subject: "Matematik" },
-  { name: "SMK Taee", candidates: 96, pass: 77, attendance: 89, gpa: 5.42, red: 13, amber: 19, subject: "Sejarah" },
-  { name: "SMK Tebakang", candidates: 104, pass: 82, attendance: 91, gpa: 5.18, red: 8, amber: 17, subject: "Bahasa Melayu" },
-  { name: "SMK Gedong", candidates: 132, pass: 74, attendance: 86, gpa: 5.61, red: 18, amber: 24, subject: "Matematik" },
-  { name: "SMK Balai Ringin", candidates: 156, pass: 79, attendance: 88, gpa: 5.36, red: 15, amber: 26, subject: "Sains" },
-  { name: "SMK Tarat", candidates: 119, pass: 84, attendance: 92, gpa: 5.04, red: 7, amber: 18, subject: "Sejarah" },
-  { name: "SMK Tebedu", candidates: 141, pass: 81, attendance: 90, gpa: 5.22, red: 10, amber: 23, subject: "Bahasa Inggeris" },
-  { name: "SMK Sadong Jaya", candidates: 88, pass: 72, attendance: 84, gpa: 5.83, red: 16, amber: 15, subject: "Bahasa Melayu" },
-  { name: "SMK Siburan", candidates: 176, pass: 86, attendance: 93, gpa: 4.98, red: 9, amber: 22, subject: "Matematik" }
+  { name: "SMK Serian", candidates: 218, pass: 88, attendance: 94, gpa: 4.91, red: 11, amber: 28, subject: "Matematik", gpsQuality: 15, gpsQuantity: 12, lmsNeed: 13, bmNeed: 7, sejarahNeed: 6 },
+  { name: "SMK Taee", candidates: 96, pass: 77, attendance: 89, gpa: 5.42, red: 13, amber: 19, subject: "Sejarah", gpsQuality: 14, gpsQuantity: 11, lmsNeed: 15, bmNeed: 5, sejarahNeed: 12 },
+  { name: "SMK Tebakang", candidates: 104, pass: 82, attendance: 91, gpa: 5.18, red: 8, amber: 17, subject: "Bahasa Melayu", gpsQuality: 10, gpsQuantity: 8, lmsNeed: 9, bmNeed: 8, sejarahNeed: 3 },
+  { name: "SMK Gedong", candidates: 132, pass: 74, attendance: 86, gpa: 5.61, red: 18, amber: 24, subject: "Matematik", gpsQuality: 20, gpsQuantity: 14, lmsNeed: 18, bmNeed: 9, sejarahNeed: 10 },
+  { name: "SMK Balai Ringin", candidates: 156, pass: 79, attendance: 88, gpa: 5.36, red: 15, amber: 26, subject: "Sains", gpsQuality: 17, gpsQuantity: 13, lmsNeed: 15, bmNeed: 8, sejarahNeed: 7 },
+  { name: "SMK Tarat", candidates: 119, pass: 84, attendance: 92, gpa: 5.04, red: 7, amber: 18, subject: "Sejarah", gpsQuality: 9, gpsQuantity: 8, lmsNeed: 7, bmNeed: 3, sejarahNeed: 5 },
+  { name: "SMK Tebedu", candidates: 141, pass: 81, attendance: 90, gpa: 5.22, red: 10, amber: 23, subject: "Bahasa Inggeris", gpsQuality: 12, gpsQuantity: 10, lmsNeed: 10, bmNeed: 4, sejarahNeed: 7 },
+  { name: "SMK Sadong Jaya", candidates: 88, pass: 72, attendance: 84, gpa: 5.83, red: 16, amber: 15, subject: "Bahasa Melayu", gpsQuality: 18, gpsQuantity: 11, lmsNeed: 16, bmNeed: 10, sejarahNeed: 8 },
+  { name: "SMK Siburan", candidates: 176, pass: 86, attendance: 93, gpa: 4.98, red: 9, amber: 22, subject: "Matematik", gpsQuality: 11, gpsQuantity: 9, lmsNeed: 9, bmNeed: 4, sejarahNeed: 6 }
 ];
 
 let students = [
@@ -157,6 +157,14 @@ async function fetchSupabaseRows(path, config) {
 }
 
 function mapSchoolRow(row) {
+  const red = Number(row.red_count || 0);
+  const amber = Number(row.amber_count || 0);
+  const derivedGpsQuality = Math.round(red * 0.65 + amber * 0.2);
+  const derivedGpsQuantity = Math.round(red * 0.45 + amber * 0.18);
+  const derivedLmsNeed = Math.max(red, Math.round(red + amber * 0.25));
+  const bmNeed = Number(row.bm_need_help ?? Math.round(derivedLmsNeed * 0.55));
+  const sejarahNeed = Number(row.sejarah_need_help ?? Math.round(derivedLmsNeed * 0.5));
+
   return {
     code: row.code,
     name: row.name,
@@ -164,9 +172,14 @@ function mapSchoolRow(row) {
     pass: Number(row.pass_forecast || 0),
     attendance: Number(row.attendance_avg || 0),
     gpa: Number(row.gpa || 0),
-    red: Number(row.red_count || 0),
-    amber: Number(row.amber_count || 0),
-    subject: row.critical_subject || "-"
+    red,
+    amber,
+    subject: row.critical_subject || "-",
+    gpsQuality: Number(row.gps_quality_need ?? derivedGpsQuality),
+    gpsQuantity: Number(row.gps_quantity_need ?? derivedGpsQuantity),
+    lmsNeed: Number(row.lms_need_help ?? derivedLmsNeed),
+    bmNeed,
+    sejarahNeed
   };
 }
 
@@ -176,7 +189,9 @@ function mapStudentRow(row) {
     school: row.school,
     risk: row.risk,
     issue: row.issue,
-    intervention: row.intervention
+    intervention: row.intervention,
+    gpsFocus: row.gps_focus || "-",
+    lmsFocus: row.lms_focus || ""
   };
 }
 
@@ -185,6 +200,36 @@ function mapInterventionRow(row) {
     owner: row.owner,
     action: row.action
   };
+}
+
+async function fetchSchoolRows(config) {
+  const fullSelect = "schools?select=code,name,candidates,pass_forecast,attendance_avg,gpa,red_count,amber_count,critical_subject,gps_quality_need,gps_quantity_need,lms_need_help,bm_need_help,sejarah_need_help&order=name.asc";
+  const basicSelect = "schools?select=code,name,candidates,pass_forecast,attendance_avg,gpa,red_count,amber_count,critical_subject&order=name.asc";
+
+  try {
+    return await fetchSupabaseRows(fullSelect, config);
+  } catch (error) {
+    const message = String(error?.message || "");
+    if (!message.includes("gps_quality_need") && !message.includes("lms_need_help") && !message.includes("bm_need_help")) {
+      throw error;
+    }
+    return fetchSupabaseRows(basicSelect, config);
+  }
+}
+
+async function fetchStudentRows(config) {
+  const fullSelect = "dashboard_student_risks?select=name,school,risk,issue,intervention,gps_focus,lms_focus,last_reviewed,updated_at&order=updated_at.desc";
+  const basicSelect = "dashboard_student_risks?select=name,school,risk,issue,intervention,last_reviewed,updated_at&order=updated_at.desc";
+
+  try {
+    return await fetchSupabaseRows(fullSelect, config);
+  } catch (error) {
+    const message = String(error?.message || "");
+    if (!message.includes("gps_focus") && !message.includes("lms_focus")) {
+      throw error;
+    }
+    return fetchSupabaseRows(basicSelect, config);
+  }
 }
 
 function clearDashboardData() {
@@ -211,14 +256,8 @@ async function loadDashboardData() {
 
   try {
     const [schoolRows, studentRows, interventionRows] = await Promise.all([
-      fetchSupabaseRows(
-        "schools?select=code,name,candidates,pass_forecast,attendance_avg,gpa,red_count,amber_count,critical_subject&order=name.asc",
-        config
-      ),
-      fetchSupabaseRows(
-        "dashboard_student_risks?select=name,school,risk,issue,intervention,last_reviewed,updated_at&order=updated_at.desc",
-        config
-      ),
+      fetchSchoolRows(config),
+      fetchStudentRows(config),
       fetchSupabaseRows("intervention_channels?select=owner,action,sort_order&order=sort_order.asc", config)
     ]);
 
@@ -399,6 +438,26 @@ function formatPct(value) {
   return `${Math.round(value)}%`;
 }
 
+function getDistrictSupportTotals(source = schools) {
+  const totals = source.reduce(
+    (sum, school) => {
+      sum.candidates += school.candidates;
+      sum.gpsQuality += school.gpsQuality || 0;
+      sum.gpsQuantity += school.gpsQuantity || 0;
+      sum.lmsNeed += school.lmsNeed || 0;
+      sum.bmNeed += school.bmNeed || 0;
+      sum.sejarahNeed += school.sejarahNeed || 0;
+      return sum;
+    },
+    { candidates: 0, gpsQuality: 0, gpsQuantity: 0, lmsNeed: 0, bmNeed: 0, sejarahNeed: 0 }
+  );
+
+  totals.gpsNeed = totals.gpsQuality + totals.gpsQuantity;
+  totals.lmsReady = Math.max(totals.candidates - totals.lmsNeed, 0);
+  totals.lmsReadyRate = totals.candidates ? (totals.lmsReady / totals.candidates) * 100 : 0;
+  return totals;
+}
+
 function getFilteredData() {
   const term = document.querySelector("#searchInput").value.trim().toLowerCase();
   const risk = document.querySelector("#riskFilter").value;
@@ -423,18 +482,17 @@ function getFilteredData() {
 
 function renderSummary() {
   const totalCandidates = schools.reduce((sum, school) => sum + school.candidates, 0);
-  const totalRed = schools.reduce((sum, school) => sum + school.red, 0);
-  const weightedPass = totalCandidates
-    ? schools.reduce((sum, school) => sum + school.pass * school.candidates, 0) / totalCandidates
-    : 0;
-  const weightedAttendance = totalCandidates
-    ? schools.reduce((sum, school) => sum + school.attendance * school.candidates, 0) / totalCandidates
-    : 0;
+  const totals = getDistrictSupportTotals();
 
   document.querySelector("#totalCandidates").textContent = totalCandidates.toLocaleString("ms-MY");
-  document.querySelector("#redCount").textContent = totalRed.toLocaleString("ms-MY");
-  document.querySelector("#passForecast").textContent = formatPct(weightedPass);
-  document.querySelector("#attendanceAvg").textContent = formatPct(weightedAttendance);
+  document.querySelector("#redCount").textContent = totals.gpsNeed.toLocaleString("ms-MY");
+  document.querySelector("#passForecast").textContent = totals.lmsNeed.toLocaleString("ms-MY");
+  document.querySelector("#attendanceAvg").textContent = formatPct(totals.lmsReadyRate);
+  document.querySelector("#gpsNeedBreakdown").textContent =
+    `Kualiti ${totals.gpsQuality}, Kuantiti ${totals.gpsQuantity}`;
+  document.querySelector("#lmsNeedBreakdown").textContent =
+    `Bahasa Melayu ${totals.bmNeed}, Sejarah ${totals.sejarahNeed}`;
+  document.querySelector("#lmsReadyNote").textContent = "Lulus Bahasa Melayu dan Sejarah";
 }
 
 function renderCharts() {
@@ -504,6 +562,11 @@ function renderSchools(filteredSchools) {
             <div><span>Lulus</span><strong>${school.pass}%</strong></div>
             <div><span>Hadir</span><strong>${school.attendance}%</strong></div>
           </div>
+          <div class="support-tags" aria-label="Bantuan GPS dan LMS">
+            <span>GPS Kualiti <strong>${school.gpsQuality}</strong></span>
+            <span>GPS Kuantiti <strong>${school.gpsQuantity}</strong></span>
+            <span>LMS <strong>${school.lmsNeed}</strong></span>
+          </div>
           <p>Purata gred ${school.gpa.toFixed(2)}. Subjek yang perlu diberi perhatian: <strong>${school.subject}</strong>.</p>
           <p>${school.red} murid Merah dan ${school.amber} murid Kuning memerlukan tindak susul.</p>
         </article>
@@ -514,26 +577,27 @@ function renderSchools(filteredSchools) {
 }
 
 function renderDrivers() {
+  const totals = getDistrictSupportTotals();
   const drivers = [
     {
-      icon: "calendar-x",
-      title: "Kehadiran bawah 87%",
-      detail: `${schools.filter((school) => school.attendance < 87).length} sekolah perlu pemantauan harian.`
+      icon: "clipboard-check",
+      title: "1. Semak kedudukan calon",
+      detail: `${totals.candidates.toLocaleString("ms-MY")} calon dipantau mengikut sekolah, kehadiran, prestasi semasa dan kedudukan subjek utama.`
     },
     {
       icon: "book-open",
-      title: "Subjek teras perlu perhatian",
-      detail: "Bahasa Melayu, Sejarah dan Matematik menjadi isyarat awal risiko gagal SPM."
+      title: "2. Bantu GPS Kualiti",
+      detail: `${totals.gpsQuality.toLocaleString("ms-MY")} calon perlu bimbingan markah untuk membantu memperbaiki purata gred sekolah.`
     },
     {
       icon: "trending-down",
-      title: "Jurang ramalan lulus",
-      detail: `${schools.filter((school) => school.pass < 80).length} sekolah di bawah paras sasaran daerah 80%.`
+      title: "3. Bantu GPS Kuantiti",
+      detail: `${totals.gpsQuantity.toLocaleString("ms-MY")} calon perlu dipastikan kekal dalam kumpulan lulus supaya jumlah lulus daerah meningkat.`
     },
     {
       icon: "map-pin",
-      title: "Kes komuniti",
-      detail: "Kes kehadiran kategori Merah wajar melibatkan ibu bapa, ketua kaum dan penghulu."
+      title: "4. Pastikan LMS",
+      detail: `${totals.lmsNeed.toLocaleString("ms-MY")} calon belum selamat LMS kerana Bahasa Melayu atau Sejarah masih perlu dipulihkan.`
     }
   ];
 
@@ -549,6 +613,12 @@ function renderDrivers() {
     .join("");
 }
 
+function getStudentFocusLabel(student) {
+  if (student.lmsFocus && student.lmsFocus !== "Sedia LMS") return "LMS";
+  if (student.gpsFocus && student.gpsFocus !== "-") return student.gpsFocus;
+  return "Pemantauan";
+}
+
 function renderStudents(filteredStudents) {
   const sorted = [...filteredStudents].sort((a, b) => riskScore[b.risk] - riskScore[a.risk]);
   document.querySelector("#studentTable").innerHTML = sorted.length
@@ -559,13 +629,14 @@ function renderStudents(filteredStudents) {
           <td><strong>${student.name}</strong></td>
           <td>${student.school}</td>
           <td><span class="risk-pill ${student.risk}">${riskLabel[student.risk]}</span></td>
+          <td>${getStudentFocusLabel(student)}</td>
           <td>${student.issue}</td>
           <td>${student.intervention}</td>
         </tr>
       `
     )
     .join("")
-    : `<tr><td colspan="5">Tiada data murid risiko untuk dipaparkan.</td></tr>`;
+    : `<tr><td colspan="6">Tiada data murid risiko untuk dipaparkan.</td></tr>`;
 }
 
 function renderInterventions() {

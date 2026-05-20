@@ -8,7 +8,7 @@
     <title>MySPMCare Serian</title>
     <link rel="manifest" href="manifest.webmanifest">
     <link rel="icon" href="icon.svg" type="image/svg+xml">
-    <link rel="stylesheet" href="styles.css?v=10">
+    <link rel="stylesheet" href="styles.css?v=11">
   </head>
   <body>
     <div class="app-shell">
@@ -93,19 +93,19 @@
             <small>9 sekolah menengah</small>
           </article>
           <article class="metric">
-            <div class="metric-top"><span class="metric-icon" data-lucide="siren"></span><span>Risiko Merah</span></div>
+            <div class="metric-top"><span class="metric-icon" data-lucide="siren"></span><span>Bantuan GPS</span></div>
             <strong id="redCount">0</strong>
-            <small>Perlu intervensi segera</small>
+            <small id="gpsNeedBreakdown">Perlu intervensi segera</small>
           </article>
           <article class="metric">
-            <div class="metric-top"><span class="metric-icon" data-lucide="trending-up"></span><span>Ramalan Lulus</span></div>
+            <div class="metric-top"><span class="metric-icon" data-lucide="trending-up"></span><span>Bantuan LMS</span></div>
             <strong id="passForecast">0%</strong>
-            <small>Berdasarkan trend semasa</small>
+            <small id="lmsNeedBreakdown">Berdasarkan trend semasa</small>
           </article>
           <article class="metric">
-            <div class="metric-top"><span class="metric-icon" data-lucide="calendar-check"></span><span>Kehadiran</span></div>
+            <div class="metric-top"><span class="metric-icon" data-lucide="calendar-check"></span><span>LMS Sedia</span></div>
             <strong id="attendanceAvg">0%</strong>
-            <small>Purata 30 hari</small>
+            <small id="lmsReadyNote">Purata 30 hari</small>
           </article>
         </section>
 
@@ -154,8 +154,8 @@
           <section class="panel" aria-labelledby="drivers-title">
             <div class="panel-head compact">
               <div>
-                <p class="eyebrow">Punca risiko</p>
-                <h3 id="drivers-title">Isyarat utama</h3>
+                <p class="eyebrow">Aliran bantuan</p>
+                <h3 id="drivers-title">GPS dan LMS</h3>
               </div>
             </div>
             <div id="driverList" class="driver-list"></div>
@@ -178,6 +178,7 @@
                     <th>Murid</th>
                     <th>Sekolah</th>
                     <th>Risiko</th>
+                    <th>Fokus</th>
                     <th>Isu utama</th>
                     <th>Intervensi</th>
                   </tr>
@@ -260,6 +261,6 @@
     <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
     <script src="https://unpkg.com/lucide@latest/dist/umd/lucide.min.js"></script>
     <script src="config.js?v=3"></script>
-    <script src="app.js?v=13"></script>
+    <script src="app.js?v=14"></script>
   </body>
 </html>

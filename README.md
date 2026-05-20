@@ -24,6 +24,32 @@ Status sekolah dikira daripada tiga isyarat awal:
 
 Nilai ini boleh ditukar selepas bengkel bersama PPD dan sekolah.
 
+## Flow GPS dan LMS
+
+Flow MySPMCare memisahkan bantuan murid kepada dua laluan utama:
+
+1. GPS Kualiti: murid yang perlu dibantu untuk menaikkan markah dan memperbaiki purata gred sekolah.
+2. GPS Kuantiti: murid yang perlu dipastikan kekal dalam kumpulan lulus supaya jumlah lulus daerah meningkat.
+3. LMS: murid yang belum selamat Layak Mendapat Sijil kerana Bahasa Melayu atau Sejarah belum lulus.
+
+Syarat LMS: Bahasa Melayu dan Sejarah mesti lulus. Jika salah satu subjek belum lulus, murid dikira masih memerlukan bantuan LMS.
+
+Medan baharu dalam jadual `schools`:
+
+- `gps_quality_need`
+- `gps_quantity_need`
+- `lms_need_help`
+- `bm_need_help`
+- `sejarah_need_help`
+
+Medan baharu dalam jadual `student_risks`:
+
+- `gps_focus`
+- `bm_pass`
+- `sejarah_pass`
+
+Untuk pangkalan data sedia ada, jalankan `supabase-gps-lms-migration.sql` dahulu, kemudian jalankan semula `supabase-seed.sql` jika mahu memasukkan data contoh GPS/LMS.
+
 ## Data Minimum Yang Diperlukan
 
 - Kod sekolah, nama sekolah, daerah, bilangan calon.

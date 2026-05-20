@@ -19,8 +19,20 @@ create table if not exists public.schools (
   red_count integer not null default 0 check (red_count >= 0),
   amber_count integer not null default 0 check (amber_count >= 0),
   critical_subject text not null default '-',
+  gps_quality_need integer not null default 0 check (gps_quality_need >= 0),
+  gps_quantity_need integer not null default 0 check (gps_quantity_need >= 0),
+  lms_need_help integer not null default 0 check (lms_need_help >= 0),
+  bm_need_help integer not null default 0 check (bm_need_help >= 0),
+  sejarah_need_help integer not null default 0 check (sejarah_need_help >= 0),
   updated_at timestamptz not null default now()
 );
+
+alter table public.schools
+  add column if not exists gps_quality_need integer not null default 0 check (gps_quality_need >= 0),
+  add column if not exists gps_quantity_need integer not null default 0 check (gps_quantity_need >= 0),
+  add column if not exists lms_need_help integer not null default 0 check (lms_need_help >= 0),
+  add column if not exists bm_need_help integer not null default 0 check (bm_need_help >= 0),
+  add column if not exists sejarah_need_help integer not null default 0 check (sejarah_need_help >= 0);
 
 create table if not exists public.student_risks (
   id uuid primary key default gen_random_uuid(),
@@ -30,10 +42,18 @@ create table if not exists public.student_risks (
   risk public.risk_level not null default 'green',
   issue text not null default '-',
   intervention text not null default '-',
+  gps_focus text not null default '-',
+  bm_pass boolean not null default true,
+  sejarah_pass boolean not null default true,
   attendance_rate numeric(5,2) check (attendance_rate between 0 and 100),
   last_reviewed date not null default current_date,
   updated_at timestamptz not null default now()
 );
+
+alter table public.student_risks
+  add column if not exists gps_focus text not null default '-',
+  add column if not exists bm_pass boolean not null default true,
+  add column if not exists sejarah_pass boolean not null default true;
 
 create table if not exists public.intervention_channels (
   id uuid primary key default gen_random_uuid(),
@@ -52,6 +72,15 @@ select
   sr.risk::text as risk,
   sr.issue,
   sr.intervention,
+  sr.gps_focus,
+  sr.bm_pass,
+  sr.sejarah_pass,
+  case
+    when sr.bm_pass and sr.sejarah_pass then 'Sedia LMS'
+    when not sr.bm_pass and not sr.sejarah_pass then 'Perlu bantuan Bahasa Melayu dan Sejarah'
+    when not sr.bm_pass then 'Perlu bantuan Bahasa Melayu'
+    else 'Perlu bantuan Sejarah'
+  end as lms_focus,
   sr.attendance_rate,
   sr.last_reviewed,
   sr.updated_at
