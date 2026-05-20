@@ -73,6 +73,8 @@ Rangka kerja data entry sebenar disediakan dalam:
 
 - `DATA_ENTRY_FLOW.md` - aliran kerja, peranan akses dan prinsip simpanan data.
 - `supabase-real-data-schema.sql` - table baharu untuk rekod sebenar, kawalan akses dan view dashboard.
+- `supabase-real-data-bootstrap.sql` - PPD Admin pertama dan kitaran aktif pertama.
+- `supabase-real-data-check.sql` - semakan ringkas selepas setup SQL.
 - `templates/student-monitoring-template.csv` - template awal untuk muat naik data sekolah.
 
 Cadangan flow:

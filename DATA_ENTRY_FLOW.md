@@ -68,7 +68,7 @@ Dokumen ini menjadi rangka kerja sebelum dummy data dashboard diganti dengan rek
 ## Cara Mula
 
 1. Jalankan `supabase-real-data-schema.sql` di Supabase SQL Editor.
-2. Tambah PPD Admin pertama di SQL Editor.
-3. Cipta satu kitaran aktif, contohnya `SPM-2026-PERCUBAAN`.
+2. Jalankan `supabase-real-data-bootstrap.sql` untuk tambah PPD Admin pertama dan kitaran aktif.
+3. Jalankan `supabase-real-data-check.sql` untuk semak table, admin dan kitaran aktif.
 4. Guna template `templates/student-monitoring-template.csv` untuk ujian import.
 5. Selepas data sebenar stabil, frontend boleh ditukar daripada table dummy kepada view `dashboard_real_school_metrics` dan `dashboard_real_student_risks`.
