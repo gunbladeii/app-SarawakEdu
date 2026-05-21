@@ -39,7 +39,7 @@
   --shadow: 0 18px 44px rgba(3, 6, 18, 0.34);
   --soft-shadow: 0 12px 28px rgba(3, 6, 18, 0.2);
   --title-font: "Orbitron MySPMCare", Arial, Helvetica, sans-serif;
-  --app-density: 0.9;
+  --app-density: 0.92;
 }
 
 * {
@@ -97,29 +97,6 @@ button {
   padding: 16px;
 }
 
-@media (min-width: 861px) {
-  .app-shell {
-    width: calc(100% / var(--app-density));
-    min-height: calc(100dvh / var(--app-density));
-    zoom: var(--app-density);
-  }
-}
-
-@supports not (zoom: 1) {
-  @media (min-width: 861px) {
-    body {
-      min-height: calc(100vh * var(--app-density));
-    }
-
-    .app-shell {
-      width: calc(100% / var(--app-density));
-      min-height: calc(100dvh / var(--app-density));
-      transform: scale(var(--app-density));
-      transform-origin: top left;
-    }
-  }
-}
-
 .sidebar {
   position: sticky;
   top: 16px;
@@ -139,6 +116,46 @@ button {
   color: var(--ink);
   scrollbar-color: rgba(190, 205, 255, 0.35) transparent;
   scrollbar-width: thin;
+}
+
+@media (min-width: 861px) {
+  body {
+    font-size: calc(16px * var(--app-density));
+  }
+
+  .app-shell {
+    grid-template-columns: minmax(250px, 284px) minmax(0, 1fr);
+    gap: 14px;
+    width: 100%;
+    padding: 14px;
+  }
+
+  .sidebar {
+    top: 14px;
+    height: calc(100dvh - 28px);
+    max-height: calc(100dvh - 28px);
+    padding: 18px;
+  }
+
+  main {
+    padding: 24px;
+  }
+
+  .topbar h2.logo-title {
+    font-size: clamp(42px, 6vw, 92px);
+  }
+
+  .panel,
+  .metric {
+    border-radius: 8px;
+  }
+
+  .summary-grid,
+  .work-grid,
+  .bottom-grid,
+  .chart-grid {
+    gap: 14px;
+  }
 }
 
 .sidebar::-webkit-scrollbar {
