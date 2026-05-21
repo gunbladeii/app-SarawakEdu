@@ -843,7 +843,36 @@ body.route-data-entry.auth-locked .data-entry-denied {
   align-items: center;
   justify-content: center;
   color: var(--ink);
-  text-decoration: none;
+}
+
+.entry-steps {
+  display: grid;
+  grid-template-columns: repeat(5, minmax(0, 1fr));
+  gap: 8px;
+  margin-bottom: 14px;
+}
+
+.entry-steps span {
+  display: grid;
+  gap: 6px;
+  min-height: 78px;
+  padding: 10px;
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  background: rgba(15, 18, 35, 0.28);
+  color: var(--muted);
+  font-size: 12px;
+  line-height: 1.25;
+}
+
+.entry-steps strong {
+  display: grid;
+  width: 28px;
+  height: 28px;
+  place-items: center;
+  border-radius: 8px;
+  background: rgba(29, 212, 200, 0.14);
+  color: var(--teal);
 }
 
 .entry-grid {
@@ -925,6 +954,13 @@ body.route-data-entry.auth-locked .data-entry-denied {
 .entry-preview-wrap td,
 .entry-preview-wrap th {
   font-size: 12px;
+}
+
+.entry-preview-wrap small {
+  display: inline-block;
+  margin-top: 3px;
+  color: var(--muted);
+  font-size: 11px;
 }
 
 .preview-status {
@@ -1531,6 +1567,10 @@ pre {
   .entry-grid {
     grid-template-columns: 1fr;
   }
+
+  .entry-steps {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
 }
 
 @media (max-height: 900px) and (min-width: 861px) {
@@ -1679,6 +1719,10 @@ pre {
   }
 
   .entry-stat-row {
+    grid-template-columns: 1fr;
+  }
+
+  .entry-steps {
     grid-template-columns: 1fr;
   }
 

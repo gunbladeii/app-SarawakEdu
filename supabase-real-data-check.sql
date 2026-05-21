@@ -51,3 +51,4 @@ end $$;
 -- Selepas semua object berstatus `ready`, boleh run dua semakan ini:
 -- select code, name, year, status, is_active from public.assessment_cycles order by updated_at desc;
 -- select email, role, school_code, active from public.app_user_access order by role, email, school_code;
+-- select column_name from information_schema.columns where table_schema = 'public' and table_name = 'student_monitoring_records' and column_name = 'student_name';

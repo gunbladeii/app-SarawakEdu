@@ -73,16 +73,17 @@ Rangka kerja data entry sebenar disediakan dalam:
 
 - `DATA_ENTRY_FLOW.md` - aliran kerja, peranan akses dan prinsip simpanan data.
 - `supabase-real-data-schema.sql` - table baharu untuk rekod sebenar, kawalan akses dan view dashboard.
+- `supabase-student-name-migration.sql` - tambah snapshot nama murid untuk paparan dashboard selepas import.
 - `supabase-real-data-bootstrap.sql` - PPD Admin pertama dan kitaran aktif pertama.
 - `supabase-real-data-check.sql` - semakan ringkas selepas setup SQL.
-- `templates/student-monitoring-template.csv` - template awal untuk muat naik data sekolah.
+- `templates/student-monitoring-template.csv` - contoh struktur template; template sebenar dijana selepas sekolah dan calon SPM dipilih.
 
 Cadangan flow:
 
 1. Data sekolah dan murid dibaca daripada API rujukan.
 2. Supabase menyimpan rekod kerja sahaja: markah, LMS, GPS, risiko, intervensi dan status semakan.
 3. Setiap kemasukan data diikat kepada satu kitaran pemantauan seperti `Percubaan SPM 2026`.
-4. Menu `Kemasukan Data` digunakan untuk pilih sekolah, semak calon SPM, preview CSV dan simpan rekod.
+4. Menu `Kemasukan Data` digunakan untuk pilih sekolah, tarik calon SPM, muat turun template sekolah yang sudah berisi senarai murid, preview CSV dan simpan rekod.
 5. Dashboard daerah membaca view `dashboard_real_school_metrics` dan `dashboard_real_student_risks` selepas data disahkan.
 
 Table dummy sedia ada (`schools` dan `student_risks`) masih dikekalkan sementara UI belum dipindahkan kepada flow sebenar.

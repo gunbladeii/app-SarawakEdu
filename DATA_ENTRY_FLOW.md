@@ -6,7 +6,7 @@ Dokumen ini menjadi rangka kerja sebelum dummy data dashboard diganti dengan rek
 
 - Data sekolah dan murid dibaca daripada API rujukan semasa diperlukan.
 - Supabase hanya menyimpan rekod kerja: markah, status LMS, GPS, risiko, intervensi dan semakan.
-- Nama penuh murid tidak perlu disimpan dalam Supabase untuk fasa awal. Simpan `student_code` dan `school_code`; paparan nama boleh dipadankan semula melalui API.
+- Nama murid disimpan sebagai snapshot paparan selepas import. Padanan rasmi tetap menggunakan `student_code` dan `school_code` daripada API.
 - Setiap kemasukan data mesti berada dalam satu kitaran pemantauan, contohnya `Ujian 1 2026`, `Percubaan SPM 2026` atau `Semakan Intervensi 1`.
 
 ## Peranan Akses
@@ -23,13 +23,14 @@ Dokumen ini menjadi rangka kerja sebelum dummy data dashboard diganti dengan rek
 ## Aliran Kerja
 
 1. PPD Admin buka kitaran pemantauan.
-2. Sekolah Admin tarik senarai calon SPM daripada API rujukan untuk semakan.
-3. Sekolah muat naik template Excel/CSV atau isi secara manual.
-4. Sistem padankan rekod menggunakan `student_code` dan `school_code`.
-5. Guru menyemak data yang gagal dipadankan atau tidak lengkap.
-6. Sekolah Admin sahkan data sekolah.
-7. Dashboard daerah membaca view aggregate daripada Supabase.
-8. PPD Admin kunci kitaran apabila data rasmi untuk mesyuarat telah dimuktamadkan.
+2. Sekolah Admin pilih sekolah dan tarik senarai calon SPM daripada API rujukan.
+3. Sistem menjana template CSV sekolah yang sudah berisi `cycle_code`, `school_code`, `student_code`, `student_name`, `class_id` dan `class_name`.
+4. Guru penyelaras hanya melengkapkan kehadiran, BM, Sejarah, GPS, risiko, catatan dan intervensi.
+5. Sekolah memuat naik semula template yang sama.
+6. Sistem padankan rekod menggunakan `student_code` dan `school_code`, kemudian memaparkan preview semakan.
+7. Sekolah Admin simpan rekod yang telah melepasi preview.
+8. Dashboard daerah membaca view aggregate daripada Supabase.
+9. PPD Admin kunci kitaran apabila data rasmi untuk mesyuarat telah dimuktamadkan.
 
 ## Rekod Minimum Setiap Murid
 
@@ -38,6 +39,7 @@ Dokumen ini menjadi rangka kerja sebelum dummy data dashboard diganti dengan rek
 | `cycle_code` | Kitaran pemantauan |
 | `school_code` | Kod sekolah daripada API rujukan |
 | `student_code` | ID murid daripada API rujukan |
+| `student_name` | Nama murid untuk paparan dashboard |
 | `class_id`, `class_name`, `form_code` | Padanan kelas dan Tingkatan 5 |
 | `attendance_rate` | Purata kehadiran terkini |
 | `bm_pass`, `sejarah_pass` | Penentu LMS |
@@ -70,6 +72,6 @@ Dokumen ini menjadi rangka kerja sebelum dummy data dashboard diganti dengan rek
 1. Jalankan `supabase-real-data-schema.sql` di Supabase SQL Editor.
 2. Jalankan `supabase-real-data-bootstrap.sql` untuk tambah PPD Admin pertama dan kitaran aktif.
 3. Jalankan `supabase-real-data-check.sql` untuk semak table, admin dan kitaran aktif.
-4. Guna template `templates/student-monitoring-template.csv` untuk ujian import.
-5. Buka menu `Kemasukan Data` dalam aplikasi untuk pilih sekolah, semak calon SPM, muat naik CSV dan simpan rekod.
+4. Jika schema lama sudah wujud, jalankan `supabase-student-name-migration.sql` untuk tambah snapshot nama murid.
+5. Buka menu `Kemasukan Data` dalam aplikasi untuk pilih sekolah, tarik calon SPM, muat turun template sekolah, muat naik CSV dan simpan rekod.
 6. Selepas data sebenar stabil, frontend boleh ditukar daripada table dummy kepada view `dashboard_real_school_metrics` dan `dashboard_real_student_risks`.

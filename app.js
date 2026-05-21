@@ -48,6 +48,7 @@ let referenceSchools = [];
 let referenceStudents = [];
 let importPreviewRows = [];
 let lastImportFileName = "";
+let activeCycleCode = "SPM-2026-PERCUBAAN";
 let schoolLoadRequest = null;
 let schoolLoadRetryId = null;
 let schoolLoadRetryCount = 0;
@@ -237,6 +238,25 @@ function setImportSummary(message) {
   if (element) element.textContent = message;
 }
 
+async function loadActiveCycleCode() {
+  const config = getSupabaseConfig();
+
+  if (!hasSupabaseConfig(config) || !activeSession) {
+    return activeCycleCode;
+  }
+
+  try {
+    const rows = await fetchSupabaseRows("assessment_cycles?select=code,name&is_active=eq.true&limit=1", config);
+    if (rows?.[0]?.code) {
+      activeCycleCode = rows[0].code;
+    }
+  } catch (error) {
+    console.warn("Kitaran aktif belum dapat dibaca.", error);
+  }
+
+  return activeCycleCode;
+}
+
 function escapeHtml(value) {
   return String(value ?? "")
     .replace(/&/g, "&amp;")
@@ -252,6 +272,18 @@ function getShortSchoolName(name) {
     .trim();
 }
 
+function getSelectedEntrySchool() {
+  const code = document.querySelector("#entrySchoolSelect")?.value || "";
+  return referenceSchools.find((school) => school.code === code) || null;
+}
+
+function updateTemplateButtons() {
+  const canDownload = Boolean(isDataEntryAllowed() && getSelectedEntrySchool() && referenceStudents.length);
+  document.querySelectorAll("#downloadTemplateBtn, #downloadTemplateInlineBtn").forEach((button) => {
+    if (button) button.disabled = !canDownload;
+  });
+}
+
 function populateEntrySchoolSelect(emptyLabel = "Pilih sekolah") {
   const select = document.querySelector("#entrySchoolSelect");
   if (!select) return;
@@ -264,6 +296,8 @@ function populateEntrySchoolSelect(emptyLabel = "Pilih sekolah") {
   if (referenceSchools.some((school) => school.code === currentValue)) {
     select.value = currentValue;
   }
+
+  updateTemplateButtons();
 }
 
 function setEntrySchoolLoading(message) {
@@ -358,8 +392,10 @@ async function loadEntryCandidates() {
   }
 
   setCandidateSummary("Sedang menyemak calon SPM...");
+  updateTemplateButtons();
 
   try {
+    await loadActiveCycleCode();
     const result = await fetchReferenceData("students", {
       kod_sekolah: schoolCode,
       spm_only: "1",
@@ -367,11 +403,127 @@ async function loadEntryCandidates() {
     });
     referenceStudents = result.data || [];
     const school = referenceSchools.find((item) => item.code === schoolCode);
-    setCandidateSummary(`${referenceStudents.length.toLocaleString("ms-MY")} calon Tingkatan 5 ditemui untuk ${getShortSchoolName(school?.name || schoolCode)}.`);
+    if (referenceStudents.length) {
+      setCandidateSummary(`${referenceStudents.length.toLocaleString("ms-MY")} calon Tingkatan 5 ditemui untuk ${getShortSchoolName(school?.name || schoolCode)}. Template sekolah kini boleh dimuat turun.`);
+      setImportSummary("Muat turun template sekolah, lengkapkan data pemantauan, kemudian muat naik fail yang sama untuk semakan preview.");
+    } else {
+      setCandidateSummary(`Tiada calon Tingkatan 5 ditemui untuk ${getShortSchoolName(school?.name || schoolCode)}.`);
+      setImportSummary("Template sekolah belum boleh dijana kerana senarai calon kosong.");
+    }
     renderImportPreview();
   } catch (error) {
     referenceStudents = [];
     setCandidateSummary(error.message);
+  } finally {
+    updateTemplateButtons();
+  }
+}
+
+function handleEntrySchoolChange() {
+  referenceStudents = [];
+  importPreviewRows = [];
+  renderImportPreview();
+  updateTemplateButtons();
+  setCandidateSummary("Tekan Tarik calon SPM untuk jana senarai murid sekolah ini.");
+  setImportSummary("Template akan tersedia selepas senarai calon SPM berjaya dibaca.");
+}
+
+const templateHeaders = [
+  "cycle_code",
+  "school_code",
+  "school_name",
+  "student_code",
+  "student_name",
+  "class_id",
+  "class_name",
+  "form_code",
+  "attendance_rate",
+  "bm_score",
+  "bm_grade",
+  "bm_pass",
+  "sejarah_score",
+  "sejarah_grade",
+  "sejarah_pass",
+  "current_gpa",
+  "target_gpa",
+  "critical_subject",
+  "gps_quality_need",
+  "gps_quantity_need",
+  "risk",
+  "issue_note",
+  "intervention_action",
+  "intervention_owner",
+  "due_date"
+];
+
+function csvCell(value) {
+  const text = String(value ?? "");
+  return /[",\r\n]/.test(text) ? `"${text.replace(/"/g, '""')}"` : text;
+}
+
+function buildStudentTemplateCsv() {
+  const school = getSelectedEntrySchool();
+  if (!school || !referenceStudents.length) {
+    throw new Error("Tarik calon SPM dahulu sebelum muat turun template.");
+  }
+
+  const schoolName = getShortSchoolName(school.name);
+  const rows = referenceStudents.map((student) => ({
+    cycle_code: activeCycleCode,
+    school_code: school.code,
+    school_name: schoolName,
+    student_code: student.studentCode || "",
+    student_name: student.name || "",
+    class_id: student.classId || "",
+    class_name: student.className || "",
+    form_code: student.formCode || "15",
+    attendance_rate: "",
+    bm_score: "",
+    bm_grade: "",
+    bm_pass: "",
+    sejarah_score: "",
+    sejarah_grade: "",
+    sejarah_pass: "",
+    current_gpa: "",
+    target_gpa: "",
+    critical_subject: "",
+    gps_quality_need: "",
+    gps_quantity_need: "",
+    risk: "",
+    issue_note: "",
+    intervention_action: "",
+    intervention_owner: "",
+    due_date: ""
+  }));
+
+  return [
+    templateHeaders.join(","),
+    ...rows.map((row) => templateHeaders.map((header) => csvCell(row[header])).join(","))
+  ].join("\r\n");
+}
+
+function downloadCsv(filename, csvText) {
+  const blob = new Blob(["\ufeff", csvText], { type: "text/csv;charset=utf-8" });
+  const url = URL.createObjectURL(blob);
+  const link = document.createElement("a");
+  link.href = url;
+  link.download = filename;
+  document.body.appendChild(link);
+  link.click();
+  link.remove();
+  URL.revokeObjectURL(url);
+}
+
+function downloadSchoolTemplate() {
+  try {
+    const school = getSelectedEntrySchool();
+    const csv = buildStudentTemplateCsv();
+    const safeCycle = activeCycleCode.replace(/[^a-z0-9_-]+/gi, "-");
+    const fileName = `template-${school.code}-${safeCycle}.csv`;
+    downloadCsv(fileName, csv);
+    setImportSummary(`${fileName} dimuat turun. Lengkapkan kolum pemantauan dan muat naik semula fail ini.`);
+  } catch (error) {
+    setImportSummary(error.message || "Template belum dapat dimuat turun.");
   }
 }
 
@@ -419,7 +571,7 @@ function parseCsv(text) {
 
   if (!rows.length) return [];
 
-  const headers = rows[0].map((header) => header.trim());
+  const headers = rows[0].map((header) => header.replace(/^\uFEFF/, "").trim());
   return rows.slice(1).map((values) =>
     headers.reduce((record, header, index) => {
       record[header] = (values[index] || "").trim();
@@ -457,34 +609,47 @@ function getFocusArea(row) {
   return "Lain-lain";
 }
 
+function deriveRiskValue({ bmPass, sejarahPass, gpsQualityNeed, gpsQuantityNeed, attendanceRate }) {
+  if (bmPass === false || sejarahPass === false || (attendanceRate !== null && attendanceRate < 85)) {
+    return "red";
+  }
+  if (gpsQualityNeed || gpsQuantityNeed || (attendanceRate !== null && attendanceRate < 90)) {
+    return "amber";
+  }
+  return "green";
+}
+
 function normalizeImportRow(raw, index) {
   const selectedSchool = document.querySelector("#entrySchoolSelect")?.value || "";
   const studentCode = String(raw.student_code || "").trim();
   const schoolCode = String(raw.school_code || selectedSchool || "").trim().toUpperCase();
-  const candidateCodes = new Set(referenceStudents.map((student) => String(student.studentCode)));
+  const candidateMap = new Map(referenceStudents.map((student) => [String(student.studentCode), student]));
+  const matchedCandidate = candidateMap.get(studentCode);
   const messages = [];
   const warnings = [];
-  const risk = normalizeRiskValue(raw.risk) || "green";
   const bmPass = parseBoolean(raw.bm_pass);
   const sejarahPass = parseBoolean(raw.sejarah_pass);
   const gpsQualityNeed = parseBoolean(raw.gps_quality_need) === true;
   const gpsQuantityNeed = parseBoolean(raw.gps_quantity_need) === true;
+  const attendanceRate = parseNumber(raw.attendance_rate);
+  const risk = normalizeRiskValue(raw.risk) || deriveRiskValue({ bmPass, sejarahPass, gpsQualityNeed, gpsQuantityNeed, attendanceRate });
 
   if (!raw.cycle_code) messages.push("cycle_code kosong");
   if (!studentCode) messages.push("student_code kosong");
   if (!schoolCode) messages.push("school_code kosong");
   if (selectedSchool && schoolCode !== selectedSchool) messages.push("school_code tidak sama dengan pilihan sekolah");
-  if (referenceStudents.length && studentCode && !candidateCodes.has(studentCode)) warnings.push("murid belum ditemui dalam semakan calon");
+  if (referenceStudents.length && studentCode && !matchedCandidate) warnings.push("murid belum ditemui dalam semakan calon");
 
   const normalized = {
     rowNumber: index + 2,
     cycleCode: String(raw.cycle_code || "").trim(),
     schoolCode,
     studentCode,
-    classId: String(raw.class_id || "").trim() || null,
-    className: String(raw.class_name || "").trim() || null,
+    studentName: String(raw.student_name || raw.nama_murid || matchedCandidate?.name || "").trim() || null,
+    classId: String(raw.class_id || matchedCandidate?.classId || "").trim() || null,
+    className: String(raw.class_name || matchedCandidate?.className || "").trim() || null,
     formCode: String(raw.form_code || "15").trim() || "15",
-    attendanceRate: parseNumber(raw.attendance_rate),
+    attendanceRate,
     bmScore: parseNumber(raw.bm_score),
     bmGrade: String(raw.bm_grade || "").trim() || null,
     bmPass,
@@ -532,16 +697,19 @@ function renderImportPreview() {
   table.innerHTML = importPreviewRows.slice(0, 30).map((row) => {
     const statusClass = row.valid ? (row.warning ? "warning" : "ready") : "error";
     const statusText = row.valid ? (row.warning ? "Semak" : "Sedia") : "Ralat";
+    const studentLabel = row.studentName
+      ? `${escapeHtml(row.studentName)}<br><small>${escapeHtml(row.studentCode || "-")}</small>`
+      : escapeHtml(row.studentCode || "-");
     return `
       <tr>
         <td><span class="preview-status ${statusClass}">${statusText}</span></td>
-        <td><strong>${row.studentCode || "-"}</strong></td>
-        <td>${row.schoolCode || "-"}</td>
-        <td>${row.className || row.classId || "-"}</td>
+        <td><strong>${studentLabel}</strong></td>
+        <td>${escapeHtml(row.schoolCode || "-")}</td>
+        <td>${escapeHtml(row.className || row.classId || "-")}</td>
         <td>${row.bmPass === null ? "-" : row.bmPass ? "Lulus" : "Belum lulus"}</td>
         <td>${row.sejarahPass === null ? "-" : row.sejarahPass ? "Lulus" : "Belum lulus"}</td>
-        <td>${riskLabel[row.risk] || row.risk}</td>
-        <td>${row.messages.join(", ") || row.issueNote || "-"}</td>
+        <td>${escapeHtml(riskLabel[row.risk] || row.risk)}</td>
+        <td>${escapeHtml(row.messages.join(", ") || row.issueNote || "-")}</td>
       </tr>
     `;
   }).join("");
@@ -581,6 +749,40 @@ async function resolveCycleId(cycleCode) {
     throw new Error(`Kitaran ${cycleCode} belum wujud.`);
   }
   return rows[0].id;
+}
+
+function buildMonitoringPayload(validRows, cycleId, batchId, includeStudentName = true) {
+  return validRows.map((row) => {
+    const payload = {
+      cycle_id: cycleId,
+      import_batch_id: batchId,
+      school_code: row.schoolCode,
+      student_code: row.studentCode,
+      class_id: row.classId,
+      class_name: row.className,
+      form_code: row.formCode,
+      attendance_rate: row.attendanceRate,
+      bm_score: row.bmScore,
+      bm_grade: row.bmGrade,
+      bm_pass: row.bmPass,
+      sejarah_score: row.sejarahScore,
+      sejarah_grade: row.sejarahGrade,
+      sejarah_pass: row.sejarahPass,
+      current_gpa: row.currentGpa,
+      target_gpa: row.targetGpa,
+      critical_subject: row.criticalSubject,
+      gps_quality_need: row.gpsQualityNeed,
+      gps_quantity_need: row.gpsQuantityNeed,
+      risk: row.risk,
+      issue_note: row.issueNote
+    };
+
+    if (includeStudentName) {
+      payload.student_name = row.studentName;
+    }
+
+    return payload;
+  });
 }
 
 async function saveImportRows() {
@@ -634,36 +836,25 @@ async function saveImportRows() {
       })
     });
     const batchId = batchRows?.[0]?.id || null;
+    let savedWithoutStudentName = false;
 
-    const monitoringPayload = validRows.map((row) => ({
-      cycle_id: cycleId,
-      import_batch_id: batchId,
-      school_code: row.schoolCode,
-      student_code: row.studentCode,
-      class_id: row.classId,
-      class_name: row.className,
-      form_code: row.formCode,
-      attendance_rate: row.attendanceRate,
-      bm_score: row.bmScore,
-      bm_grade: row.bmGrade,
-      bm_pass: row.bmPass,
-      sejarah_score: row.sejarahScore,
-      sejarah_grade: row.sejarahGrade,
-      sejarah_pass: row.sejarahPass,
-      current_gpa: row.currentGpa,
-      target_gpa: row.targetGpa,
-      critical_subject: row.criticalSubject,
-      gps_quality_need: row.gpsQualityNeed,
-      gps_quantity_need: row.gpsQuantityNeed,
-      risk: row.risk,
-      issue_note: row.issueNote
-    }));
-
-    await supabaseRequest("student_monitoring_records?on_conflict=cycle_id,student_code", {
-      method: "POST",
-      headers: { Prefer: "resolution=merge-duplicates" },
-      body: JSON.stringify(monitoringPayload)
-    });
+    try {
+      await supabaseRequest("student_monitoring_records?on_conflict=cycle_id,student_code", {
+        method: "POST",
+        headers: { Prefer: "resolution=merge-duplicates" },
+        body: JSON.stringify(buildMonitoringPayload(validRows, cycleId, batchId, true))
+      });
+    } catch (error) {
+      if (!String(error.message || "").includes("student_name")) {
+        throw error;
+      }
+      await supabaseRequest("student_monitoring_records?on_conflict=cycle_id,student_code", {
+        method: "POST",
+        headers: { Prefer: "resolution=merge-duplicates" },
+        body: JSON.stringify(buildMonitoringPayload(validRows, cycleId, batchId, false))
+      });
+      savedWithoutStudentName = true;
+    }
 
     const interventionsPayload = validRows
       .filter((row) => row.interventionAction)
@@ -688,7 +879,7 @@ async function saveImportRows() {
       });
     }
 
-    setEntryStatus(`${validRows.length.toLocaleString("ms-MY")} rekod berjaya disimpan untuk ${cycleCode}.`);
+    setEntryStatus(`${validRows.length.toLocaleString("ms-MY")} rekod berjaya disimpan untuk ${cycleCode}.${savedWithoutStudentName ? " Jalankan SQL student_name untuk papar nama murid di dashboard." : ""}`);
     setImportSummary("Rekod telah disimpan. Dashboard real-data boleh dibaca selepas paparan dipindahkan kepada view baharu.");
   } catch (error) {
     setEntryStatus(error.message || "Rekod tidak berjaya disimpan.");
@@ -1036,7 +1227,7 @@ async function initAuth() {
     activeSession = session;
     updateAuthUi(session);
     const entryLoad = isDataEntryAllowed(session) ? loadEntrySchools({ silent: !isDataEntryRoute() }) : Promise.resolve();
-    Promise.all([loadDashboardData(), entryLoad]).then(() => {
+    Promise.all([loadDashboardData(), loadActiveCycleCode(), entryLoad]).then(() => {
       renderAll();
       if (isDataEntryAllowed(session)) scheduleEntrySchoolRetry();
     });
@@ -1480,6 +1671,9 @@ document.querySelector("#googleLoginHeroBtn").addEventListener("click", signInWi
 document.querySelector("#logoutBtn").addEventListener("click", signOut);
 document.querySelector("#reloadSchoolsBtn").addEventListener("click", () => loadEntrySchools());
 document.querySelector("#loadCandidatesBtn").addEventListener("click", loadEntryCandidates);
+document.querySelector("#downloadTemplateBtn").addEventListener("click", downloadSchoolTemplate);
+document.querySelector("#downloadTemplateInlineBtn").addEventListener("click", downloadSchoolTemplate);
+document.querySelector("#entrySchoolSelect").addEventListener("change", handleEntrySchoolChange);
 document.querySelector("#entrySchoolSelect").addEventListener("focus", () => {
   if (activeSession && referenceSchools.length === 0) loadEntrySchools();
 });
@@ -1493,6 +1687,7 @@ async function initApp() {
   setTodayLabel();
   renderIcons();
   await initAuth();
+  await loadActiveCycleCode();
   await loadDashboardData();
   if (isDataEntryAllowed()) {
     await loadEntrySchools({ silent: !isDataEntryRoute() });

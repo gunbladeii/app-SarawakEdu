@@ -104,7 +104,15 @@
               <p class="eyebrow">Rekod sebenar</p>
               <h3 id="data-entry-title">Kemasukan data sekolah</h3>
             </div>
-            <a class="secondary-action template-link" href="templates/student-monitoring-template.csv" download>Muat turun template</a>
+            <button id="downloadTemplateBtn" class="secondary-action template-link" type="button" disabled>Muat turun template sekolah</button>
+          </div>
+
+          <div class="entry-steps" aria-label="Langkah kemasukan data">
+            <span><strong>1</strong> Pilih sekolah</span>
+            <span><strong>2</strong> Tarik calon SPM</span>
+            <span><strong>3</strong> Muat turun template sekolah</span>
+            <span><strong>4</strong> Lengkapkan dan muat naik fail</span>
+            <span><strong>5</strong> Semak preview dan simpan</span>
           </div>
 
           <div class="entry-grid">
@@ -123,8 +131,9 @@
             <div class="entry-card">
               <label for="csvFileInput">Fail rekod sekolah</label>
               <input id="csvFileInput" type="file" accept=".csv,text/csv">
+              <button id="downloadTemplateInlineBtn" class="secondary-action" type="button" disabled>Muat turun template sekolah ini</button>
               <button id="saveImportBtn" class="primary-action" type="button" disabled>Simpan rekod</button>
-              <p id="importSummary" class="entry-note">Muat naik fail CSV mengikut template sebelum simpan ke rekod sebenar.</p>
+              <p id="importSummary" class="entry-note">Tarik calon SPM dahulu. Template akan diisi automatik dengan senarai murid sekolah yang dipilih.</p>
             </div>
 
             <div class="entry-card entry-card-wide">
@@ -333,6 +342,6 @@
     <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
     <script src="https://unpkg.com/lucide@latest/dist/umd/lucide.min.js"></script>
     <script src="config.js?v=3"></script>
-    <script src="app.js?v=17"></script>
+    <script src="app.js?v=18"></script>
   </body>
 </html>
