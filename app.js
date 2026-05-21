@@ -52,6 +52,7 @@ let activeCycleCode = "SPM-2026-PERCUBAAN";
 let schoolLoadRequest = null;
 let schoolLoadRetryId = null;
 let schoolLoadRetryCount = 0;
+let schoolViewMode = "performance";
 
 const DATA_ENTRY_ALLOWED_EMAILS = new Set(["gunbladeii25@gmail.com"]);
 const REFERENCE_CACHE_VERSION = "v3";
@@ -1405,6 +1406,48 @@ function formatPct(value) {
   return `${Math.round(value)}%`;
 }
 
+function clampPercentage(value) {
+  return Math.min(Math.max(Number(value) || 0, 0), 100);
+}
+
+function getAttendanceRisk(school) {
+  if (school.attendance < 87) return "red";
+  if (school.attendance < 91) return "amber";
+  return "green";
+}
+
+function getAttendanceAttentionCount(school) {
+  const targetGap = Math.max(0, 92 - Number(school.attendance || 0));
+  return Math.max(0, Math.round(Number(school.candidates || 0) * targetGap / 100));
+}
+
+function getSubjectRisk(school) {
+  const lmsRate = school.candidates ? school.lmsNeed / school.candidates : 0;
+  if (school.lmsNeed >= 15 || lmsRate >= 0.12) return "red";
+  if (school.lmsNeed >= 8 || lmsRate >= 0.07) return "amber";
+  return "green";
+}
+
+function getSchoolRiskForCurrentView(school) {
+  if (schoolViewMode === "attendance") return getAttendanceRisk(school);
+  if (schoolViewMode === "subjects") return getSubjectRisk(school);
+  return getSchoolRisk(school);
+}
+
+function setSchoolViewMode(mode) {
+  if (!["performance", "attendance", "subjects"].includes(mode)) return;
+  schoolViewMode = mode;
+  renderAll();
+}
+
+function syncSchoolTabs() {
+  document.querySelectorAll("#schoolViewTabs button").forEach((button) => {
+    const active = button.dataset.schoolView === schoolViewMode;
+    button.classList.toggle("active", active);
+    button.setAttribute("aria-selected", String(active));
+  });
+}
+
 function getDistrictSupportTotals(source = schools) {
   const totals = source.reduce(
     (sum, school) => {
@@ -1430,7 +1473,7 @@ function getFilteredData() {
   const risk = document.querySelector("#riskFilter").value;
 
   const filteredSchools = schools.filter((school) => {
-    const schoolRisk = getSchoolRisk(school);
+    const schoolRisk = getSchoolRiskForCurrentView(school);
     const matchesTerm = school.name.toLowerCase().includes(term);
     const matchesRisk = risk === "all" || schoolRisk === risk;
     return matchesTerm && matchesRisk;
@@ -1510,10 +1553,75 @@ function renderCharts() {
 
 function renderSchools(filteredSchools) {
   const grid = document.querySelector("#schoolGrid");
+  syncSchoolTabs();
+
   grid.innerHTML = filteredSchools.length
     ? filteredSchools
     .map((school) => {
-      const risk = getSchoolRisk(school);
+      const risk = getSchoolRiskForCurrentView(school);
+
+      if (schoolViewMode === "attendance") {
+        const attentionCount = getAttendanceAttentionCount(school);
+        const stableCount = Math.max(Number(school.candidates || 0) - attentionCount, 0);
+        return `
+          <article class="school-card attendance-view ${risk}">
+            <div>
+              <div class="traffic ${risk}" aria-label="Risiko ${riskLabel[risk]}">
+                <span class="red"></span>
+                <span class="amber"></span>
+                <span class="green"></span>
+              </div>
+              <h4>${school.name}</h4>
+            </div>
+            <div class="school-stats">
+              <div><span>Calon</span><strong>${school.candidates}</strong></div>
+              <div><span>Hadir</span><strong>${school.attendance}%</strong></div>
+              <div><span>Semak</span><strong>${attentionCount}</strong></div>
+            </div>
+            <div class="attendance-meter" aria-label="Kehadiran ${school.attendance}%">
+              <span style="--attendance-value: ${clampPercentage(school.attendance)}%"></span>
+            </div>
+            <div class="support-tags" aria-label="Status kehadiran">
+              <span>Stabil <strong>${stableCount}</strong></span>
+              <span>Pantau <strong>${attentionCount}</strong></span>
+              <span>Sasar <strong>92%</strong></span>
+            </div>
+            <p>Fokus kehadiran: semak murid di bawah paras selamat dan susun tindakan awal bersama guru kelas serta ibu bapa.</p>
+          </article>
+        `;
+      }
+
+      if (schoolViewMode === "subjects") {
+        const mainSubject = school.subject && school.subject !== "-" ? school.subject : "Belum dikenal pasti";
+        return `
+          <article class="school-card subject-view ${risk}">
+            <div>
+              <div class="traffic ${risk}" aria-label="Risiko ${riskLabel[risk]}">
+                <span class="red"></span>
+                <span class="amber"></span>
+                <span class="green"></span>
+              </div>
+              <h4>${school.name}</h4>
+            </div>
+            <div class="school-stats">
+              <div><span>LMS</span><strong>${school.lmsNeed}</strong></div>
+              <div><span>BM</span><strong>${school.bmNeed}</strong></div>
+              <div><span>Sejarah</span><strong>${school.sejarahNeed}</strong></div>
+            </div>
+            <div class="subject-focus">
+              <span>Subjek utama</span>
+              <strong>${mainSubject}</strong>
+            </div>
+            <div class="support-tags" aria-label="Fokus subjek">
+              <span>GPS Kualiti <strong>${school.gpsQuality}</strong></span>
+              <span>BM belum selamat <strong>${school.bmNeed}</strong></span>
+              <span>Sejarah belum selamat <strong>${school.sejarahNeed}</strong></span>
+            </div>
+            <p>Keutamaan: pastikan Bahasa Melayu dan Sejarah lulus untuk LMS, kemudian beri bimbingan subjek kritikal yang menekan GPS sekolah.</p>
+          </article>
+        `;
+      }
+
       return `
         <article class="school-card ${risk}">
           <div>
@@ -1815,6 +1923,9 @@ function initPwaStatus() {
 
 document.querySelector("#searchInput").addEventListener("input", renderAll);
 document.querySelector("#riskFilter").addEventListener("change", renderAll);
+document.querySelectorAll("#schoolViewTabs button").forEach((button) => {
+  button.addEventListener("click", () => setSchoolViewMode(button.dataset.schoolView));
+});
 window.addEventListener("hashchange", syncRouteUi);
 document.querySelector("#exportBtn").addEventListener("click", () => {
   document.querySelector("#summaryText").textContent = buildSummaryText();

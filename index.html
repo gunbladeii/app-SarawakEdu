@@ -223,10 +223,10 @@
                 <p class="eyebrow">Paparan sekolah</p>
                 <h3 id="schools-title">Status 9 SM Daerah Serian</h3>
               </div>
-              <div class="segmented" role="group" aria-label="Paparan">
-                <button class="active" type="button">Prestasi</button>
-                <button type="button">Kehadiran</button>
-                <button type="button">Subjek Kritikal</button>
+              <div id="schoolViewTabs" class="segmented" role="tablist" aria-label="Paparan sekolah">
+                <button class="active" type="button" role="tab" aria-selected="true" data-school-view="performance">Prestasi</button>
+                <button type="button" role="tab" aria-selected="false" data-school-view="attendance">Kehadiran</button>
+                <button type="button" role="tab" aria-selected="false" data-school-view="subjects">Subjek Kritikal</button>
               </div>
             </div>
             <div id="schoolGrid" class="school-grid"></div>
