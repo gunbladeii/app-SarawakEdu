@@ -5,6 +5,7 @@ Dokumen ini menjadi rangka kerja sebelum dummy data dashboard diganti dengan rek
 ## Prinsip
 
 - Data sekolah dan murid dibaca daripada API rujukan semasa diperlukan.
+- Senarai rujukan dicache sementara supaya paparan tidak kosong apabila API luar lambat atau gagal seketika.
 - Supabase hanya menyimpan rekod kerja: markah, status LMS, GPS, risiko, intervensi dan semakan.
 - Nama murid disimpan sebagai snapshot paparan selepas import. Padanan rasmi tetap menggunakan `student_code` dan `school_code` daripada API.
 - Setiap kemasukan data mesti berada dalam satu kitaran pemantauan, contohnya `Ujian 1 2026`, `Percubaan SPM 2026` atau `Semakan Intervensi 1`.

@@ -54,6 +54,9 @@ let schoolLoadRetryId = null;
 let schoolLoadRetryCount = 0;
 
 const DATA_ENTRY_ALLOWED_EMAILS = new Set(["gunbladeii25@gmail.com"]);
+const REFERENCE_CACHE_VERSION = "v2";
+const SCHOOL_CACHE_TTL_MS = 24 * 60 * 60 * 1000;
+const STUDENT_CACHE_TTL_MS = 6 * 60 * 60 * 1000;
 
 const dataSourceMessages = {
   local: "Data contoh",
@@ -200,6 +203,18 @@ async function fetchReferenceData(scope, params = {}) {
     throw new Error("Sila masuk Google dahulu.");
   }
 
+  const cached = getReferenceCache(scope, params);
+  if (cached && params.refresh !== "1") {
+    return {
+      ...cached,
+      meta: {
+        ...(cached.meta || {}),
+        cache: scope === "students" ? "browser_session" : "browser_cache",
+        cacheAgeSeconds: Math.max(0, Math.round((Date.now() - cached.cachedAt) / 1000))
+      }
+    };
+  }
+
   const url = new URL("/api/oracle-reference", window.location.origin);
   url.searchParams.set("scope", scope);
   for (const [key, value] of Object.entries(params)) {
@@ -208,19 +223,110 @@ async function fetchReferenceData(scope, params = {}) {
     }
   }
 
-  const response = await fetch(url, {
-    headers: {
-      accept: "application/json",
-      authorization: `Bearer ${activeSession.access_token}`
+  let response;
+  let payload;
+  try {
+    response = await fetch(url, {
+      headers: {
+        accept: "application/json",
+        authorization: `Bearer ${activeSession.access_token}`
+      }
+    });
+    payload = await response.json();
+  } catch (error) {
+    if (cached) {
+      return {
+        ...cached,
+        meta: {
+          ...(cached.meta || {}),
+          cache: scope === "students" ? "browser_session_stale" : "browser_cache_stale",
+          cacheAgeSeconds: Math.max(0, Math.round((Date.now() - cached.cachedAt) / 1000)),
+          warning: "Data terkini belum dapat disambung."
+        }
+      };
     }
-  });
-  const payload = await response.json();
+    throw error;
+  }
 
   if (!response.ok || payload.success === false) {
+    if (cached) {
+      return {
+        ...cached,
+        meta: {
+          ...(cached.meta || {}),
+          cache: scope === "students" ? "browser_session_stale" : "browser_cache_stale",
+          cacheAgeSeconds: Math.max(0, Math.round((Date.now() - cached.cachedAt) / 1000)),
+          warning: payload.message || "Data terkini belum dapat dibaca."
+        }
+      };
+    }
     throw new Error(payload.message || "Data rujukan tidak dapat dibaca.");
   }
 
+  setReferenceCache(scope, params, payload);
   return payload;
+}
+
+function getReferenceCacheStorage(scope) {
+  try {
+    return scope === "students" ? window.sessionStorage : window.localStorage;
+  } catch {
+    return null;
+  }
+}
+
+function getReferenceCacheKey(scope, params = {}) {
+  const pairs = Object.entries(params)
+    .filter(([key, value]) => !["refresh", "_"].includes(key) && value !== undefined && value !== null && value !== "")
+    .sort(([left], [right]) => left.localeCompare(right));
+  return `myspmcare:${REFERENCE_CACHE_VERSION}:${scope}:${pairs.map(([key, value]) => `${key}=${value}`).join("&")}`;
+}
+
+function getReferenceCache(scope, params = {}) {
+  const storage = getReferenceCacheStorage(scope);
+  if (!storage) return null;
+
+  try {
+    const raw = storage.getItem(getReferenceCacheKey(scope, params));
+    if (!raw) return null;
+
+    const cached = JSON.parse(raw);
+    const ttl = scope === "students" ? STUDENT_CACHE_TTL_MS : SCHOOL_CACHE_TTL_MS;
+    if (!cached?.payload || !cached.cachedAt || Date.now() - cached.cachedAt > ttl) {
+      storage.removeItem(getReferenceCacheKey(scope, params));
+      return null;
+    }
+
+    return {
+      ...cached.payload,
+      cachedAt: cached.cachedAt
+    };
+  } catch {
+    return null;
+  }
+}
+
+function setReferenceCache(scope, params = {}, payload) {
+  const storage = getReferenceCacheStorage(scope);
+  if (!storage || !payload?.success) return;
+
+  try {
+    storage.setItem(getReferenceCacheKey(scope, params), JSON.stringify({
+      cachedAt: Date.now(),
+      payload
+    }));
+  } catch {
+    // Browser storage can be full or blocked; the app still works without it.
+  }
+}
+
+function getReferenceCacheNote(meta = {}) {
+  const cache = meta.cache || "";
+  if (cache.includes("browser")) return " Disediakan daripada simpanan sementara peranti.";
+  if (cache === "server_cache") return " Disediakan daripada simpanan pantas sistem.";
+  if (cache === "server_stale") return " Disediakan daripada simpanan terakhir kerana sumber data semasa belum stabil.";
+  if (meta.source === "senarai_serian") return " Senarai sekolah asas digunakan sementara sumber data semasa belum stabil.";
+  return "";
 }
 
 function setEntryStatus(message) {
@@ -319,7 +425,7 @@ function scheduleEntrySchoolRetry(delay = 1000) {
 }
 
 async function loadEntrySchools(options = {}) {
-  const { silent = false } = options;
+  const { silent = false, refresh = false } = options;
 
   if (schoolLoadRequest) {
     return schoolLoadRequest;
@@ -351,13 +457,13 @@ async function loadEntrySchools(options = {}) {
     }
 
     try {
-      const result = await fetchReferenceData("schools");
+      const result = await fetchReferenceData("schools", refresh ? { refresh: "1" } : {});
       referenceSchools = Array.isArray(result.data) ? result.data : [];
       populateEntrySchoolSelect(referenceSchools.length ? "Pilih sekolah" : "Tiada sekolah ditemui");
 
       if (referenceSchools.length) {
         schoolLoadRetryCount = 0;
-        setEntryStatus(`${referenceSchools.length} sekolah tersedia. Pilih sekolah untuk semak calon SPM.`);
+        setEntryStatus(`${referenceSchools.length} sekolah tersedia. Pilih sekolah untuk semak calon SPM.${getReferenceCacheNote(result.meta)}`);
       } else {
         setEntryStatus("Senarai sekolah belum ditemui. Cuba muat semula senarai sebentar lagi.");
         scheduleEntrySchoolRetry(1500);
@@ -404,7 +510,7 @@ async function loadEntryCandidates() {
     referenceStudents = result.data || [];
     const school = referenceSchools.find((item) => item.code === schoolCode);
     if (referenceStudents.length) {
-      setCandidateSummary(`${referenceStudents.length.toLocaleString("ms-MY")} calon Tingkatan 5 ditemui untuk ${getShortSchoolName(school?.name || schoolCode)}. Template sekolah kini boleh dimuat turun.`);
+      setCandidateSummary(`${referenceStudents.length.toLocaleString("ms-MY")} calon Tingkatan 5 ditemui untuk ${getShortSchoolName(school?.name || schoolCode)}. Template sekolah kini boleh dimuat turun.${getReferenceCacheNote(result.meta)}`);
       setImportSummary("Muat turun template sekolah, lengkapkan data pemantauan, kemudian muat naik fail yang sama untuk semakan preview.");
     } else {
       setCandidateSummary(`Tiada calon Tingkatan 5 ditemui untuk ${getShortSchoolName(school?.name || schoolCode)}.`);
@@ -1669,7 +1775,7 @@ document.querySelector("#cameraStopBtn").addEventListener("click", stopCamera);
 document.querySelector("#sidebarLoginBtn").addEventListener("click", signInWithGoogle);
 document.querySelector("#googleLoginHeroBtn").addEventListener("click", signInWithGoogle);
 document.querySelector("#logoutBtn").addEventListener("click", signOut);
-document.querySelector("#reloadSchoolsBtn").addEventListener("click", () => loadEntrySchools());
+document.querySelector("#reloadSchoolsBtn").addEventListener("click", () => loadEntrySchools({ refresh: true }));
 document.querySelector("#loadCandidatesBtn").addEventListener("click", loadEntryCandidates);
 document.querySelector("#downloadTemplateBtn").addEventListener("click", downloadSchoolTemplate);
 document.querySelector("#downloadTemplateInlineBtn").addEventListener("click", downloadSchoolTemplate);
