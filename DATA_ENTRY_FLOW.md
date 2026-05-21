@@ -7,7 +7,7 @@ Dokumen ini menjadi rangka kerja sebelum dummy data dashboard diganti dengan rek
 - Data sekolah dan murid dibaca daripada API rujukan semasa diperlukan.
 - Senarai rujukan dicache sementara supaya paparan tidak kosong apabila API luar lambat atau gagal seketika.
 - Supabase hanya menyimpan rekod kerja: markah, status LMS, GPS, risiko, intervensi dan semakan.
-- Nama murid disimpan sebagai snapshot paparan selepas import. Padanan rasmi tetap menggunakan `student_code` dan `school_code` daripada API.
+- Nama murid disimpan sebagai snapshot paparan selepas import. API rujukan murid semasa tidak membekalkan nama murid, jadi `student_name` perlu dilengkapkan oleh sekolah untuk kemasukan pertama. Selepas rekod pernah disimpan, nama tersebut akan digunakan semula dalam template berikutnya.
 - Setiap kemasukan data mesti berada dalam satu kitaran pemantauan, contohnya `Ujian 1 2026`, `Percubaan SPM 2026` atau `Semakan Intervensi 1`.
 
 ## Peranan Akses
@@ -25,8 +25,8 @@ Dokumen ini menjadi rangka kerja sebelum dummy data dashboard diganti dengan rek
 
 1. PPD Admin buka kitaran pemantauan.
 2. Sekolah Admin pilih sekolah dan tarik senarai calon SPM daripada API rujukan.
-3. Sistem menjana template CSV sekolah yang sudah berisi `cycle_code`, `school_code`, `student_code`, `student_name`, `class_id` dan `class_name`.
-4. Guru penyelaras hanya melengkapkan kehadiran, BM, Sejarah, GPS, risiko, catatan dan intervensi.
+3. Sistem menjana template CSV sekolah yang sudah berisi `cycle_code`, `school_code`, `student_code`, `student_reference`, `class_id` dan `class_name`.
+4. Guru penyelaras melengkapkan `student_name` jika masih kosong, kemudian mengisi kehadiran, BM, Sejarah, GPS, risiko, catatan dan intervensi.
 5. Sekolah memuat naik semula template yang sama.
 6. Sistem padankan rekod menggunakan `student_code` dan `school_code`, kemudian memaparkan preview semakan.
 7. Sekolah Admin simpan rekod yang telah melepasi preview.
@@ -40,7 +40,8 @@ Dokumen ini menjadi rangka kerja sebelum dummy data dashboard diganti dengan rek
 | `cycle_code` | Kitaran pemantauan |
 | `school_code` | Kod sekolah daripada API rujukan |
 | `student_code` | ID murid daripada API rujukan |
-| `student_name` | Nama murid untuk paparan dashboard |
+| `student_reference` | Petunjuk padanan murid seperti kelas, ID murid dan 4 digit akhir KP |
+| `student_name` | Nama murid untuk paparan dashboard; dilengkapkan oleh sekolah jika sumber data tidak membekalkannya |
 | `class_id`, `class_name`, `form_code` | Padanan kelas dan Tingkatan 5 |
 | `attendance_rate` | Purata kehadiran terkini |
 | `bm_pass`, `sejarah_pass` | Penentu LMS |

@@ -54,7 +54,7 @@ let schoolLoadRetryId = null;
 let schoolLoadRetryCount = 0;
 
 const DATA_ENTRY_ALLOWED_EMAILS = new Set(["gunbladeii25@gmail.com"]);
-const REFERENCE_CACHE_VERSION = "v2";
+const REFERENCE_CACHE_VERSION = "v3";
 const SCHOOL_CACHE_TTL_MS = 24 * 60 * 60 * 1000;
 const STUDENT_CACHE_TTL_MS = 6 * 60 * 60 * 1000;
 
@@ -383,6 +383,48 @@ function getSelectedEntrySchool() {
   return referenceSchools.find((school) => school.code === code) || null;
 }
 
+function getStudentReferenceText(student) {
+  return [
+    student.className ? `Kelas ${student.className}` : "",
+    student.studentCode ? `ID ${student.studentCode}` : "",
+    student.identityHint || ""
+  ].filter(Boolean).join(" | ");
+}
+
+async function hydrateStudentNamesFromSavedRecords(schoolCode, candidateRows) {
+  if (!candidateRows.length || !activeSession) {
+    return candidateRows;
+  }
+
+  try {
+    const encodedSchool = encodeURIComponent(schoolCode);
+    const rows = await supabaseRequest(
+      `student_monitoring_records?select=student_code,student_name&school_code=eq.${encodedSchool}&student_name=not.is.null&order=updated_at.desc&limit=2000`
+    );
+    const nameMap = new Map();
+
+    rows.forEach((row) => {
+      const code = String(row.student_code || "").trim();
+      const name = String(row.student_name || "").trim();
+      if (code && name && !nameMap.has(code)) {
+        nameMap.set(code, name);
+      }
+    });
+
+    if (!nameMap.size) {
+      return candidateRows;
+    }
+
+    return candidateRows.map((student) => ({
+      ...student,
+      name: student.name || nameMap.get(String(student.studentCode)) || ""
+    }));
+  } catch (error) {
+    console.warn("Nama murid tersimpan belum dapat dibaca.", error);
+    return candidateRows;
+  }
+}
+
 function updateTemplateButtons() {
   const canDownload = Boolean(isDataEntryAllowed() && getSelectedEntrySchool() && referenceStudents.length);
   document.querySelectorAll("#downloadTemplateBtn, #downloadTemplateInlineBtn").forEach((button) => {
@@ -507,11 +549,17 @@ async function loadEntryCandidates() {
       spm_only: "1",
       limit: "250"
     });
-    referenceStudents = result.data || [];
+    referenceStudents = await hydrateStudentNamesFromSavedRecords(schoolCode, result.data || []);
     const school = referenceSchools.find((item) => item.code === schoolCode);
     if (referenceStudents.length) {
-      setCandidateSummary(`${referenceStudents.length.toLocaleString("ms-MY")} calon Tingkatan 5 ditemui untuk ${getShortSchoolName(school?.name || schoolCode)}. Template sekolah kini boleh dimuat turun.${getReferenceCacheNote(result.meta)}`);
-      setImportSummary("Muat turun template sekolah, lengkapkan data pemantauan, kemudian muat naik fail yang sama untuk semakan preview.");
+      const missingNames = referenceStudents.filter((student) => !student.name).length;
+      const nameNote = missingNames
+        ? ` ${missingNames.toLocaleString("ms-MY")} nama belum dibekalkan oleh sumber data; lengkapkan kolum student_name dalam template.`
+        : "";
+      setCandidateSummary(`${referenceStudents.length.toLocaleString("ms-MY")} calon Tingkatan 5 ditemui untuk ${getShortSchoolName(school?.name || schoolCode)}. Template sekolah kini boleh dimuat turun.${nameNote}${getReferenceCacheNote(result.meta)}`);
+      setImportSummary(missingNames
+        ? "Muat turun template sekolah, lengkapkan nama dan data pemantauan, kemudian muat naik fail yang sama untuk semakan preview."
+        : "Muat turun template sekolah, lengkapkan data pemantauan, kemudian muat naik fail yang sama untuk semakan preview.");
     } else {
       setCandidateSummary(`Tiada calon Tingkatan 5 ditemui untuk ${getShortSchoolName(school?.name || schoolCode)}.`);
       setImportSummary("Template sekolah belum boleh dijana kerana senarai calon kosong.");
@@ -539,6 +587,7 @@ const templateHeaders = [
   "school_code",
   "school_name",
   "student_code",
+  "student_reference",
   "student_name",
   "class_id",
   "class_name",
@@ -579,6 +628,7 @@ function buildStudentTemplateCsv() {
     school_code: school.code,
     school_name: schoolName,
     student_code: student.studentCode || "",
+    student_reference: getStudentReferenceText(student),
     student_name: student.name || "",
     class_id: student.classId || "",
     class_name: student.className || "",
@@ -627,7 +677,9 @@ function downloadSchoolTemplate() {
     const safeCycle = activeCycleCode.replace(/[^a-z0-9_-]+/gi, "-");
     const fileName = `template-${school.code}-${safeCycle}.csv`;
     downloadCsv(fileName, csv);
-    setImportSummary(`${fileName} dimuat turun. Lengkapkan kolum pemantauan dan muat naik semula fail ini.`);
+    const missingNames = referenceStudents.filter((student) => !student.name).length;
+    const nameNote = missingNames ? " Lengkapkan juga kolum student_name kerana nama murid belum dibekalkan oleh sumber data." : "";
+    setImportSummary(`${fileName} dimuat turun. Lengkapkan kolum pemantauan dan muat naik semula fail ini.${nameNote}`);
   } catch (error) {
     setImportSummary(error.message || "Template belum dapat dimuat turun.");
   }
@@ -739,19 +791,21 @@ function normalizeImportRow(raw, index) {
   const gpsQuantityNeed = parseBoolean(raw.gps_quantity_need) === true;
   const attendanceRate = parseNumber(raw.attendance_rate);
   const risk = normalizeRiskValue(raw.risk) || deriveRiskValue({ bmPass, sejarahPass, gpsQualityNeed, gpsQuantityNeed, attendanceRate });
+  const importedStudentName = String(raw.student_name || raw.nama_murid || "").trim();
 
   if (!raw.cycle_code) messages.push("cycle_code kosong");
   if (!studentCode) messages.push("student_code kosong");
   if (!schoolCode) messages.push("school_code kosong");
   if (selectedSchool && schoolCode !== selectedSchool) messages.push("school_code tidak sama dengan pilihan sekolah");
   if (referenceStudents.length && studentCode && !matchedCandidate) warnings.push("murid belum ditemui dalam semakan calon");
+  if (!importedStudentName && !matchedCandidate?.name) warnings.push("student_name kosong");
 
   const normalized = {
     rowNumber: index + 2,
     cycleCode: String(raw.cycle_code || "").trim(),
     schoolCode,
     studentCode,
-    studentName: String(raw.student_name || raw.nama_murid || matchedCandidate?.name || "").trim() || null,
+    studentName: importedStudentName || matchedCandidate?.name || null,
     classId: String(raw.class_id || matchedCandidate?.classId || "").trim() || null,
     className: String(raw.class_name || matchedCandidate?.className || "").trim() || null,
     formCode: String(raw.form_code || "15").trim() || "15",

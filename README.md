@@ -85,7 +85,8 @@ Cadangan flow:
 3. Supabase menyimpan rekod kerja sahaja: markah, LMS, GPS, risiko, intervensi dan status semakan.
 4. Setiap kemasukan data diikat kepada satu kitaran pemantauan seperti `Percubaan SPM 2026`.
 5. Menu `Kemasukan Data` digunakan untuk pilih sekolah, tarik calon SPM, muat turun template sekolah yang sudah berisi senarai murid, preview CSV dan simpan rekod.
-6. Dashboard daerah membaca view `dashboard_real_school_metrics` dan `dashboard_real_student_risks` selepas data disahkan.
+6. API rujukan murid semasa tidak membekalkan nama murid. Untuk kemasukan pertama, sekolah melengkapkan `student_name` dalam template; selepas disimpan, nama tersebut digunakan semula sebagai rujukan paparan.
+7. Dashboard daerah membaca view `dashboard_real_school_metrics` dan `dashboard_real_student_risks` selepas data disahkan.
 
 Table dummy sedia ada (`schools` dan `student_risks`) masih dikekalkan sementara UI belum dipindahkan kepada flow sebenar.
 
