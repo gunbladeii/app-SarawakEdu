@@ -1,5 +1,13 @@
 {
   "cleanUrls": true,
+  "regions": [
+    "sin1"
+  ],
+  "functions": {
+    "api/oracle-reference.js": {
+      "maxDuration": 60
+    }
+  },
   "headers": [
     {
       "source": "/sw.js",

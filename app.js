@@ -505,7 +505,7 @@ async function loadEntryCandidates() {
     const result = await fetchReferenceData("students", {
       kod_sekolah: schoolCode,
       spm_only: "1",
-      limit: "1000"
+      limit: "250"
     });
     referenceStudents = result.data || [];
     const school = referenceSchools.find((item) => item.code === schoolCode);
