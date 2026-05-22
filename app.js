@@ -1505,22 +1505,29 @@ function renderSummary() {
   document.querySelector("#lmsReadyNote").textContent = "Lulus Bahasa Melayu dan Sejarah";
 }
 
-function renderCharts() {
+function renderCharts(filteredSchools) {
+  const source = filteredSchools ?? schools;
   const chart = document.querySelector("#performanceChart");
   const donut = document.querySelector("#riskDonut");
   const legend = document.querySelector("#riskLegend");
-  const totalCandidates = schools.reduce((sum, school) => sum + school.candidates, 0);
-  const totalRed = schools.reduce((sum, school) => sum + school.red, 0);
-  const totalAmber = schools.reduce((sum, school) => sum + school.amber, 0);
+  const title = document.querySelector("#risk-chart-title");
+
+  const riskValue = document.querySelector("#riskFilter").value;
+  const riskSuffix = { red: " — Merah", amber: " — Kuning", green: " — Hijau" }[riskValue] ?? "";
+  if (title) title.innerHTML = `<em>Traffic Light</em> murid${riskSuffix}`;
+
+  const totalCandidates = source.reduce((sum, school) => sum + school.candidates, 0);
+  const totalRed = source.reduce((sum, school) => sum + school.red, 0);
+  const totalAmber = source.reduce((sum, school) => sum + school.amber, 0);
   const totalGreen = Math.max(totalCandidates - totalRed - totalAmber, 0);
   const redDeg = totalCandidates ? (totalRed / totalCandidates) * 360 : 0;
   const amberDeg = totalCandidates ? redDeg + (totalAmber / totalCandidates) * 360 : redDeg;
   const safeAvg = totalCandidates
-    ? Math.round(schools.reduce((sum, school) => sum + school.pass * school.candidates, 0) / totalCandidates)
+    ? Math.round(source.reduce((sum, school) => sum + school.pass * school.candidates, 0) / totalCandidates)
     : 0;
 
-  chart.innerHTML = schools.length
-    ? schools
+  chart.innerHTML = source.length
+    ? source
     .map(
       (school) => `
         <div class="bar-row">
@@ -1533,11 +1540,11 @@ function renderCharts() {
       `
     )
     .join("")
-    : `<div class="empty-state">Data akan dipaparkan selepas login Google.</div>`;
+    : `<div class="empty-state">Tiada sekolah sepadan dengan tapisan ini.</div>`;
 
   donut.style.setProperty("--red-deg", `${redDeg}deg`);
   donut.style.setProperty("--amber-deg", `${amberDeg}deg`);
-  donut.dataset.label = `${safeAvg}%`;
+  donut.dataset.label = totalCandidates ? `${safeAvg}%` : "—";
   legend.innerHTML = [
     ["Merah", totalRed, "red"],
     ["Kuning", totalAmber, "amber"],
@@ -1733,7 +1740,7 @@ function renderInterventions() {
 function renderAll() {
   const { filteredSchools, filteredStudents } = getFilteredData();
   renderSummary();
-  renderCharts();
+  renderCharts(filteredSchools);
   renderSchools(filteredSchools);
   renderDrivers();
   renderStudents(filteredStudents);
