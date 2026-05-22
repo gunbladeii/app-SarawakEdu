@@ -1,4 +1,4 @@
-const CACHE_NAME = "spm-watch-serian-v22";
+const CACHE_NAME = "spm-watch-serian-v23";
 const APP_ASSETS = [
   "./",
   "./index.html",
@@ -7,6 +7,7 @@ const APP_ASSETS = [
   "./app.js",
   "./manifest.webmanifest",
   "./icon.svg",
+  "./assets/sarawak-flag.png",
   "./assets/fonts/orbitron-medium.ttf",
   "./assets/fonts/orbitron-bold.ttf",
   "./assets/fonts/OFL-Orbitron.md"

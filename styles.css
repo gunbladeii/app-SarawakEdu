@@ -174,11 +174,13 @@ button {
 }
 
 .brand-mark {
+  position: relative;
   display: grid;
   width: 54px;
   height: 54px;
   flex: 0 0 auto;
   place-items: center;
+  overflow: hidden;
   border: 1px solid rgba(29, 212, 200, 0.34);
   border-radius: 8px;
   background:
@@ -187,9 +189,29 @@ button {
   box-shadow: 0 12px 26px rgba(29, 180, 255, 0.22);
 }
 
+.brand-mark::after {
+  position: absolute;
+  inset: 0;
+  background:
+    linear-gradient(145deg, rgba(16, 18, 34, 0.12), rgba(29, 180, 255, 0.2)),
+    radial-gradient(circle at 72% 22%, rgba(255, 255, 255, 0.32), transparent 32%);
+  content: "";
+}
+
+.brand-mark img {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+}
+
 .brand-mark svg {
+  position: relative;
+  z-index: 1;
   width: 29px;
   height: 29px;
+  filter: drop-shadow(0 2px 3px rgba(0, 0, 0, 0.38));
 }
 
 .brand h1,
@@ -519,6 +541,10 @@ main > * {
   filter: drop-shadow(0 18px 24px rgba(7, 12, 30, 0.34));
 }
 
+.topbar h2.sarawak-logo {
+  padding-right: clamp(110px, 12vw, 172px);
+}
+
 .logo-title::after {
   position: absolute;
   right: 0.08em;
@@ -526,8 +552,13 @@ main > * {
   left: 0.1em;
   height: 0.08em;
   border-radius: 999px;
-  background: linear-gradient(90deg, var(--teal), var(--blue-2), transparent);
-  box-shadow: 0 0 22px rgba(29, 212, 200, 0.26);
+  background:
+    linear-gradient(90deg, #ffd119 0 18%, #d4142a 18% 34%, #05060a 34% 50%, var(--teal) 50% 82%, transparent 100%);
+  box-shadow:
+    0 0 28px rgba(29, 212, 200, 0.34),
+    0 0 22px rgba(255, 209, 25, 0.24);
+  transform-origin: left center;
+  animation: logoUnderlineDraw 1s cubic-bezier(0.16, 1, 0.3, 1) forwards;
   content: "";
 }
 
@@ -547,15 +578,17 @@ main > * {
 
 .logo-spm {
   padding: 0.02em 0.11em 0.07em;
-  border: 1px solid rgba(255, 255, 255, 0.18);
+  border: 1px solid rgba(255, 255, 255, 0.22);
   border-radius: 0.18em;
   background:
-    linear-gradient(135deg, rgba(29, 212, 200, 0.28), rgba(93, 124, 255, 0.18)),
+    linear-gradient(135deg, rgba(8, 12, 30, 0.56) 0%, rgba(18, 36, 88, 0.48) 100%),
+    url(./assets/sarawak-flag.png) center / 120% auto no-repeat,
     linear-gradient(135deg, #1db4ff, #5d7cff 54%, #8b5cf6);
   color: #ffffff;
   box-shadow:
-    inset 0 1px 0 rgba(255, 255, 255, 0.18),
-    0 18px 34px rgba(38, 85, 232, 0.28);
+    inset 0 1px 0 rgba(255, 255, 255, 0.22),
+    0 18px 34px rgba(38, 85, 232, 0.32),
+    0 0 0 1px rgba(29, 212, 200, 0.14);
   transform: skew(-4deg);
 }
 
@@ -566,6 +599,18 @@ main > * {
   height: 0.07em;
   border-radius: 999px;
   background: rgba(255, 255, 255, 0.7);
+  content: "";
+}
+
+.logo-spm::after {
+  position: absolute;
+  right: 0.12em;
+  bottom: 0.09em;
+  left: 0.12em;
+  height: 0.06em;
+  border-radius: 999px;
+  background: linear-gradient(90deg, #ffd119 0 28%, #d4142a 28% 58%, #08090e 58% 100%);
+  box-shadow: 0 0 10px rgba(255, 209, 25, 0.28);
   content: "";
 }
 
@@ -590,6 +635,93 @@ main > * {
   background: var(--green);
   box-shadow: 0 0 18px rgba(24, 201, 139, 0.58);
   content: "";
+}
+
+.logo-flag-badge {
+  position: absolute !important;
+  top: -0.06em;
+  right: 0;
+  display: inline-flex !important;
+  align-items: center;
+  gap: 0.11em;
+  padding: 0.055em 0.16em 0.055em 0.09em;
+  border: 1px solid rgba(255, 209, 25, 0.55);
+  border-radius: 0.2em;
+  background:
+    linear-gradient(135deg, rgba(255, 209, 25, 0.2) 0%, rgba(212, 20, 42, 0.16) 55%, rgba(10, 14, 32, 0.78) 100%),
+    rgba(10, 13, 28, 0.9);
+  color: #fff3ba;
+  font-family: Arial, Helvetica, sans-serif;
+  font-size: 0.155em;
+  font-weight: 900;
+  letter-spacing: 0.04em;
+  line-height: 1;
+  text-transform: uppercase;
+  box-shadow:
+    inset 0 1px 0 rgba(255, 255, 255, 0.2),
+    0 0 20px rgba(255, 209, 25, 0.26),
+    0 0 42px rgba(212, 20, 42, 0.18),
+    0 12px 30px rgba(0, 0, 0, 0.42);
+  transform: translateY(-20%);
+  animation: flagBadgePulse 3.4s ease-in-out infinite;
+}
+
+.logo-flag-badge img {
+  width: 2.1em;
+  height: 1.18em;
+  flex: 0 0 auto;
+  border: 1px solid rgba(255, 255, 255, 0.44);
+  border-radius: 0.1em;
+  object-fit: cover;
+  box-shadow:
+    0 2px 8px rgba(0, 0, 0, 0.44),
+    0 0 0 1px rgba(255, 209, 25, 0.22);
+}
+
+.flag-badge-label {
+  display: flex;
+  flex-direction: column;
+  gap: 0.2em;
+}
+
+.flag-badge-state {
+  color: #fff3ba;
+  font-size: 1em;
+  font-weight: 900;
+  letter-spacing: 0.07em;
+}
+
+.flag-badge-sub {
+  color: rgba(255, 243, 186, 0.58);
+  font-size: 0.68em;
+  font-weight: 700;
+  letter-spacing: 0.05em;
+}
+
+@keyframes flagBadgePulse {
+  0%, 100% {
+    box-shadow:
+      inset 0 1px 0 rgba(255, 255, 255, 0.2),
+      0 0 20px rgba(255, 209, 25, 0.26),
+      0 0 42px rgba(212, 20, 42, 0.18),
+      0 12px 30px rgba(0, 0, 0, 0.42);
+  }
+  50% {
+    box-shadow:
+      inset 0 1px 0 rgba(255, 255, 255, 0.26),
+      0 0 34px rgba(255, 209, 25, 0.52),
+      0 0 64px rgba(212, 20, 42, 0.36),
+      0 14px 36px rgba(0, 0, 0, 0.48);
+  }
+}
+
+@keyframes logoUnderlineDraw {
+  from {
+    transform: scaleX(0);
+  }
+  to {
+    transform: scaleX(1);
+  }
 }
 
 .top-actions {
