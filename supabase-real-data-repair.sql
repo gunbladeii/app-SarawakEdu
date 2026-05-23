@@ -180,13 +180,13 @@ create index if not exists student_intervention_school_cycle_idx
   on public.student_intervention_records (school_code, cycle_id, status);
 
 create or replace function public.current_app_role()
-returns public.app_role
+returns text
 language sql
 stable
 security definer
 set search_path = public
 as $$
-  select aur.role::text::public.app_role
+  select aur.role::text
   from public.app_user_access aur
   where aur.active = true
     and (
