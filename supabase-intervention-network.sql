@@ -96,10 +96,10 @@ select
     else 9
   end as sort_order,
   count(*)::integer as total_tasks,
-  count(*) filter (where status in ('pending', 'accepted'))::integer as pending_tasks,
-  count(*) filter (where status = 'in_progress')::integer as active_tasks,
-  count(*) filter (where status = 'done')::integer as done_tasks,
-  count(*) filter (where risk = 'red' and status <> 'done')::integer as urgent_tasks
+  (count(*) filter (where status in ('pending', 'accepted')))::integer as pending_tasks,
+  (count(*) filter (where status = 'in_progress'))::integer as active_tasks,
+  (count(*) filter (where status = 'done'))::integer as done_tasks,
+  (count(*) filter (where risk = 'red' and status <> 'done'))::integer as urgent_tasks
 from public.intervention_stakeholder_tasks
 group by stakeholder_type;
 
