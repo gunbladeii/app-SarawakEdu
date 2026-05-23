@@ -1783,6 +1783,26 @@ function getLocalSuggestion(student) {
   };
 }
 
+function hasReadableStudentName(student) {
+  return Boolean(student?.name && student.name !== "Murid" && student.name !== student.studentCode);
+}
+
+function escapeRegExp(value) {
+  return String(value).replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
+}
+
+function replaceStudentCodeWithName(value, student) {
+  if (value === null || value === undefined) return "";
+
+  let text = String(value);
+  if (!student?.studentCode || !hasReadableStudentName(student)) return text;
+
+  const codePattern = escapeRegExp(student.studentCode);
+  text = text.replace(new RegExp(`\\s*\\(${codePattern}\\)`, "g"), ` ${student.name}`);
+  text = text.replace(new RegExp(codePattern, "g"), student.name);
+  return text.trim();
+}
+
 function normalizeSuggestion(value, student) {
   const fallback = getLocalSuggestion(student);
   const suggestion = value && typeof value === "object" ? value : {};
@@ -1794,12 +1814,12 @@ function normalizeSuggestion(value, student) {
     : fallback.owners;
 
   return {
-    priority: suggestion.priority || fallback.priority,
-    review: suggestion.review || fallback.review,
-    owners: owners.length ? owners : fallback.owners,
-    issueSummary: suggestion.issueSummary || fallback.issueSummary,
-    actionSteps: actionSteps.length ? actionSteps : fallback.actionSteps,
-    escalation: suggestion.escalation || fallback.escalation,
+    priority: replaceStudentCodeWithName(suggestion.priority || fallback.priority, student),
+    review: replaceStudentCodeWithName(suggestion.review || fallback.review, student),
+    owners: (owners.length ? owners : fallback.owners).map((owner) => replaceStudentCodeWithName(owner, student)),
+    issueSummary: replaceStudentCodeWithName(suggestion.issueSummary || fallback.issueSummary, student),
+    actionSteps: (actionSteps.length ? actionSteps : fallback.actionSteps).map((step) => replaceStudentCodeWithName(step, student)),
+    escalation: replaceStudentCodeWithName(suggestion.escalation || fallback.escalation, student),
     source: suggestion.source || fallback.source
   };
 }

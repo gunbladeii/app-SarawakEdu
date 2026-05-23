@@ -8,7 +8,7 @@ create table if not exists public.student_ai_suggestions (
   risk text not null default 'green' check (risk in ('red', 'amber', 'green')),
   focus_area text not null default 'Pemantauan',
   source_hash text not null,
-  prompt_version text not null default 'myspmcare-intervention-v1',
+  prompt_version text not null default 'myspmcare-intervention-v2',
   provider text not null default 'local',
   model text not null default 'rule-fallback',
   suggestion jsonb not null,
