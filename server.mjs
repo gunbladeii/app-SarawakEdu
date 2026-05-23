@@ -1,6 +1,7 @@
 import { createReadStream, existsSync, readFileSync, statSync } from "node:fs";
 import { createServer } from "node:http";
 import { extname, join, normalize, resolve } from "node:path";
+import { handleAiInterventionRequest } from "./lib/ai-intervention.mjs";
 import { handleOracleReferenceRequest } from "./lib/oracle-reference.mjs";
 
 const root = resolve(process.cwd());
@@ -61,6 +62,16 @@ createServer((request, response) => {
         response.writeHead(500, { "content-type": "application/json; charset=utf-8" });
       }
       response.end(JSON.stringify({ success: false, message: "Ralat tidak dijangka." }));
+    });
+    return;
+  }
+
+  if (pathname === "/api/ai-intervention-suggestion") {
+    handleAiInterventionRequest(request, response).catch(() => {
+      if (!response.headersSent) {
+        response.writeHead(500, { "content-type": "application/json; charset=utf-8" });
+      }
+      response.end(JSON.stringify({ success: false, message: "Cadangan AI belum dapat dijana." }));
     });
     return;
   }

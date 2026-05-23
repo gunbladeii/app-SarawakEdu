@@ -6,6 +6,9 @@
   "functions": {
     "api/oracle-reference.js": {
       "maxDuration": 60
+    },
+    "api/ai-intervention-suggestion.js": {
+      "maxDuration": 60
     }
   },
   "headers": [

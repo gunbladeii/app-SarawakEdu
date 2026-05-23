@@ -30,6 +30,7 @@ let schoolLoadRetryCount = 0;
 let schoolViewMode = "performance";
 let displayedStudents = [];
 let agenticProgressTimers = [];
+let agenticRequestId = 0;
 
 const DATA_ENTRY_ALLOWED_EMAILS = new Set(["gunbladeii25@gmail.com"]);
 const REFERENCE_CACHE_VERSION = "v3";
@@ -1766,6 +1767,43 @@ function getStudentInterventionPlan(student) {
   };
 }
 
+function getLocalSuggestion(student) {
+  const plan = getStudentInterventionPlan(student);
+
+  return {
+    priority: plan.priority,
+    review: plan.review,
+    owners: plan.ownerText.split(",").map((owner) => owner.trim()).filter(Boolean),
+    issueSummary: student.issue,
+    actionSteps: plan.steps,
+    escalation: student.risk === "red"
+      ? "Rujuk kepada kaunselor dan libatkan ibu bapa jika tiada perubahan selepas semakan pertama."
+      : "Kekalkan pemantauan sekolah dan kemas kini status selepas tempoh semakan.",
+    source: "local"
+  };
+}
+
+function normalizeSuggestion(value, student) {
+  const fallback = getLocalSuggestion(student);
+  const suggestion = value && typeof value === "object" ? value : {};
+  const actionSteps = Array.isArray(suggestion.actionSteps)
+    ? suggestion.actionSteps.filter(Boolean)
+    : fallback.actionSteps;
+  const owners = Array.isArray(suggestion.owners)
+    ? suggestion.owners.filter(Boolean)
+    : fallback.owners;
+
+  return {
+    priority: suggestion.priority || fallback.priority,
+    review: suggestion.review || fallback.review,
+    owners: owners.length ? owners : fallback.owners,
+    issueSummary: suggestion.issueSummary || fallback.issueSummary,
+    actionSteps: actionSteps.length ? actionSteps : fallback.actionSteps,
+    escalation: suggestion.escalation || fallback.escalation,
+    source: suggestion.source || fallback.source
+  };
+}
+
 function buildStudentPlanText(student) {
   const plan = getStudentInterventionPlan(student);
   const attendanceText = student.attendance === null ? "Belum direkod" : `${student.attendance}%`;
@@ -1789,11 +1827,16 @@ function buildStudentPlanText(student) {
   ].join("\n");
 }
 
-function buildStudentPlanHtml(student) {
-  const plan = getStudentInterventionPlan(student);
+function buildStudentPlanHtml(student, aiResult = null) {
+  const suggestion = normalizeSuggestion(aiResult?.suggestion, student);
   const attendanceText = student.attendance === null ? "Belum direkod" : `${student.attendance}%`;
   const riskText = riskLabel[student.risk] || student.risk;
   const focusText = getStudentFocusLabel(student);
+  const sourceText = aiResult?.provider === "gemini"
+    ? `AI ${aiResult.model || "Gemini"}${aiResult.cached ? " - simpanan" : ""}`
+    : aiResult?.cached
+      ? "Simpanan sistem"
+      : "Cadangan sistem";
 
   return `
     <div class="ai-result-card">
@@ -1803,32 +1846,42 @@ function buildStudentPlanHtml(student) {
           <h4>${escapeHtml(student.name)}</h4>
           <span>${escapeHtml(student.school)}</span>
         </div>
-        <span class="risk-pill ${student.risk}">${escapeHtml(riskText)}</span>
+        <div class="ai-result-badges">
+          <span class="ai-source-chip">${escapeHtml(sourceText)}</span>
+          <span class="risk-pill ${student.risk}">${escapeHtml(riskText)}</span>
+        </div>
       </div>
 
       <div class="ai-metric-grid">
         <div><span>Fokus</span><strong>${escapeHtml(focusText)}</strong></div>
         <div><span>Kehadiran</span><strong>${escapeHtml(attendanceText)}</strong></div>
-        <div><span>Keutamaan</span><strong>${escapeHtml(plan.priority)}</strong></div>
-        <div><span>Semakan</span><strong>${escapeHtml(plan.review)}</strong></div>
+        <div><span>Keutamaan</span><strong>${escapeHtml(suggestion.priority)}</strong></div>
+        <div><span>Semakan</span><strong>${escapeHtml(suggestion.review)}</strong></div>
       </div>
 
       <div class="ai-section">
         <span class="ai-section-label">Isu Utama</span>
-        <p>${escapeHtml(student.issue)}</p>
+        <p>${escapeHtml(suggestion.issueSummary)}</p>
       </div>
 
       <div class="ai-section">
         <span class="ai-section-label">Pihak Terlibat</span>
-        <p>${escapeHtml(plan.ownerText)}</p>
+        <p>${escapeHtml(suggestion.owners.join(", "))}</p>
       </div>
 
       <div class="ai-section">
         <span class="ai-section-label">Pelan Tindakan</span>
         <ol class="ai-plan-list">
-          ${plan.steps.map((step) => `<li>${escapeHtml(step)}</li>`).join("")}
+          ${suggestion.actionSteps.map((step) => `<li>${escapeHtml(step)}</li>`).join("")}
         </ol>
       </div>
+
+      <div class="ai-section">
+        <span class="ai-section-label">Eskalasi</span>
+        <p>${escapeHtml(suggestion.escalation)}</p>
+      </div>
+
+      ${aiResult?.warning ? `<p class="ai-warning">${escapeHtml(aiResult.warning)}</p>` : ""}
     </div>
   `;
 }
@@ -1939,6 +1992,7 @@ function setDialogContent(title, html) {
 }
 
 function openSummaryDialog(title, content) {
+  agenticRequestId += 1;
   clearAgenticTimers();
   setDialogContent(title, `<pre class="dialog-text">${escapeHtml(content)}</pre>`);
 }
@@ -1997,22 +2051,91 @@ function renderAgenticProgress(student, activeIndex = 0) {
   `);
 }
 
-function openStudentPlan(index) {
+function wait(ms) {
+  return new Promise((resolve) => window.setTimeout(resolve, ms));
+}
+
+function buildStudentAiPayload(student) {
+  return {
+    studentCode: student.studentCode || "",
+    schoolCode: student.schoolCode || "",
+    student: {
+      studentCode: student.studentCode || "",
+      schoolCode: student.schoolCode || "",
+      name: student.name,
+      school: student.school,
+      risk: student.risk,
+      focus: getStudentFocusLabel(student),
+      issue: student.issue,
+      intervention: student.intervention,
+      attendance: student.attendance,
+      bmPass: student.bmPass,
+      sejarahPass: student.sejarahPass,
+      gpsFocus: student.gpsFocus,
+      lmsFocus: student.lmsFocus
+    }
+  };
+}
+
+async function requestAiInterventionSuggestion(student) {
+  if (!activeSession?.access_token) {
+    return {
+      success: true,
+      provider: "local",
+      model: "rule-fallback",
+      warning: "Sila log masuk untuk menjana cadangan AI sebenar. Cadangan ini dijana oleh sistem sebagai sandaran.",
+      suggestion: getLocalSuggestion(student)
+    };
+  }
+
+  try {
+    const response = await fetch("./api/ai-intervention-suggestion", {
+      method: "POST",
+      headers: {
+        authorization: `Bearer ${activeSession.access_token}`,
+        "content-type": "application/json",
+        accept: "application/json"
+      },
+      body: JSON.stringify(buildStudentAiPayload(student))
+    });
+    const payload = await response.json();
+
+    if (!response.ok || payload.success === false) {
+      throw new Error(payload.message || "Cadangan AI belum dapat dijana.");
+    }
+
+    return payload;
+  } catch (error) {
+    return {
+      success: true,
+      provider: "local",
+      model: "rule-fallback",
+      warning: `${error.message || "Cadangan AI belum dapat dijana."} Cadangan sandaran dipaparkan.`,
+      suggestion: getLocalSuggestion(student)
+    };
+  }
+}
+
+async function openStudentPlan(index) {
   const student = displayedStudents[index];
   if (!student) return;
+  const requestId = ++agenticRequestId;
   clearAgenticTimers();
   renderAgenticProgress(student, 0);
+  const aiRequest = requestAiInterventionSuggestion(student);
 
   [1, 2, 3].forEach((stepIndex) => {
     agenticProgressTimers.push(window.setTimeout(() => {
+      if (requestId !== agenticRequestId) return;
       renderAgenticProgress(student, stepIndex);
     }, stepIndex * 650));
   });
 
-  agenticProgressTimers.push(window.setTimeout(() => {
-    setDialogContent("Cadangan intervensi murid", buildStudentPlanHtml(student));
+  const [, aiResult] = await Promise.all([wait(2550), aiRequest]);
+  if (requestId === agenticRequestId) {
+    setDialogContent("Cadangan intervensi murid", buildStudentPlanHtml(student, aiResult));
     clearAgenticTimers();
-  }, 2550));
+  }
 }
 
 function setCameraStatus(message) {
@@ -2186,6 +2309,7 @@ document.querySelector("#exportBtn").addEventListener("click", () => {
   openSummaryDialog("Ringkasan tindakan daerah", buildSummaryText());
 });
 document.querySelector("#closeDialog").addEventListener("click", () => {
+  agenticRequestId += 1;
   clearAgenticTimers();
   document.querySelector("#summaryDialog").close();
 });

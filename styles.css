@@ -1941,6 +1941,28 @@ dialog::backdrop {
   border-bottom: 1px solid var(--line);
 }
 
+.ai-result-badges {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  justify-content: flex-end;
+  gap: 8px;
+}
+
+.ai-source-chip {
+  display: inline-flex;
+  align-items: center;
+  min-height: 28px;
+  padding: 0 10px;
+  border: 1px solid rgba(36, 213, 206, 0.42);
+  border-radius: 999px;
+  background: rgba(36, 213, 206, 0.1);
+  color: #cffff8;
+  font-family: var(--title-font);
+  font-size: 11px;
+  font-weight: 700;
+}
+
 .ai-metric-grid {
   display: grid;
   grid-template-columns: repeat(4, minmax(0, 1fr));
@@ -1991,6 +2013,17 @@ dialog::backdrop {
 .ai-plan-list li {
   color: #eef3ff;
   line-height: 1.55;
+}
+
+.ai-warning {
+  margin: 14px 0 0;
+  padding: 12px;
+  border: 1px solid rgba(240, 165, 41, 0.34);
+  border-radius: 8px;
+  background: rgba(240, 165, 41, 0.08);
+  color: #ffe3ad;
+  font-size: 13px;
+  line-height: 1.45;
 }
 
 @media (max-width: 1180px) {
@@ -2193,6 +2226,10 @@ dialog::backdrop {
   .ai-result-hero {
     align-items: flex-start;
     flex-direction: column;
+  }
+
+  .ai-result-badges {
+    justify-content: flex-start;
   }
 
   .ai-metric-grid {

@@ -201,6 +201,8 @@ ORACLE_REFERENCE_REQUIRE_AUTH=true
 ORACLE_REFERENCE_ALLOWED_EMAILS=
 SUPABASE_URL=https://PROJECT_ID.supabase.co
 SUPABASE_ANON_KEY=...
+GEMINI_API_KEY=...
+GEMINI_MODEL=gemini-2.5-flash-lite
 ```
 
 Gunakan salah satu cara untuk mengehadkan data Serian:
@@ -221,6 +223,25 @@ GET /api/oracle-reference?scope=students&kod_sekolah=KODSEKOLAH&spm_only=1
 Nota keselamatan: route ini memerlukan bearer token Supabase pengguna. Untuk ujian local tanpa login, boleh set `ORACLE_REFERENCE_REQUIRE_AUTH=false`, tetapi jangan guna tetapan itu di production.
 
 Jika mahu hadkan kepada akaun tertentu sahaja, isi `ORACLE_REFERENCE_ALLOWED_EMAILS` dengan senarai email yang dipisahkan koma.
+
+## Cadangan Intervensi AI
+
+Butang `Cadangan` pada jadual murid memanggil route backend:
+
+```text
+POST /api/ai-intervention-suggestion
+```
+
+Flow ringkas:
+
+- Frontend hantar `student_code` dan snapshot ringkas murid.
+- Backend semak sesi Supabase pengguna.
+- Backend cuba baca rekod murid daripada `dashboard_real_student_risks`, kemudian fallback ke `dashboard_student_risks`.
+- Jika `GEMINI_API_KEY` wujud, cadangan dijana menggunakan Gemini.
+- Hasil cadangan disimpan dalam `student_ai_suggestions` supaya panggilan seterusnya boleh guna cache.
+- Jika AI key/table belum tersedia, sistem guna cadangan sandaran supaya paparan tidak gagal.
+
+Sebelum guna cache AI, jalankan SQL `supabase-ai-suggestions.sql` di Supabase.
 
 ## Carta Animasi
 
