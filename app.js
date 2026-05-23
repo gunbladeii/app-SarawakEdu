@@ -29,6 +29,7 @@ let schoolLoadRetryId = null;
 let schoolLoadRetryCount = 0;
 let schoolViewMode = "performance";
 let displayedStudents = [];
+let agenticProgressTimers = [];
 
 const DATA_ENTRY_ALLOWED_EMAILS = new Set(["gunbladeii25@gmail.com"]);
 const REFERENCE_CACHE_VERSION = "v3";
@@ -1788,6 +1789,50 @@ function buildStudentPlanText(student) {
   ].join("\n");
 }
 
+function buildStudentPlanHtml(student) {
+  const plan = getStudentInterventionPlan(student);
+  const attendanceText = student.attendance === null ? "Belum direkod" : `${student.attendance}%`;
+  const riskText = riskLabel[student.risk] || student.risk;
+  const focusText = getStudentFocusLabel(student);
+
+  return `
+    <div class="ai-result-card">
+      <div class="ai-result-hero">
+        <div>
+          <p class="ai-kicker">Cadangan Intervensi Murid</p>
+          <h4>${escapeHtml(student.name)}</h4>
+          <span>${escapeHtml(student.school)}</span>
+        </div>
+        <span class="risk-pill ${student.risk}">${escapeHtml(riskText)}</span>
+      </div>
+
+      <div class="ai-metric-grid">
+        <div><span>Fokus</span><strong>${escapeHtml(focusText)}</strong></div>
+        <div><span>Kehadiran</span><strong>${escapeHtml(attendanceText)}</strong></div>
+        <div><span>Keutamaan</span><strong>${escapeHtml(plan.priority)}</strong></div>
+        <div><span>Semakan</span><strong>${escapeHtml(plan.review)}</strong></div>
+      </div>
+
+      <div class="ai-section">
+        <span class="ai-section-label">Isu Utama</span>
+        <p>${escapeHtml(student.issue)}</p>
+      </div>
+
+      <div class="ai-section">
+        <span class="ai-section-label">Pihak Terlibat</span>
+        <p>${escapeHtml(plan.ownerText)}</p>
+      </div>
+
+      <div class="ai-section">
+        <span class="ai-section-label">Pelan Tindakan</span>
+        <ol class="ai-plan-list">
+          ${plan.steps.map((step) => `<li>${escapeHtml(step)}</li>`).join("")}
+        </ol>
+      </div>
+    </div>
+  `;
+}
+
 function renderStudents(filteredStudents) {
   const sorted = sortStudentsByPriority(filteredStudents);
   displayedStudents = sorted;
@@ -1881,17 +1926,93 @@ function buildSummaryText() {
   ].join("\n");
 }
 
-function openSummaryDialog(title, content) {
+function clearAgenticTimers() {
+  agenticProgressTimers.forEach((timerId) => window.clearTimeout(timerId));
+  agenticProgressTimers = [];
+}
+
+function setDialogContent(title, html) {
   const dialog = document.querySelector("#summaryDialog");
   document.querySelector("#summaryDialogTitle").textContent = title;
-  document.querySelector("#summaryText").textContent = content;
-  dialog.showModal();
+  document.querySelector("#summaryContent").innerHTML = html;
+  if (!dialog.open) dialog.showModal();
+}
+
+function openSummaryDialog(title, content) {
+  clearAgenticTimers();
+  setDialogContent(title, `<pre class="dialog-text">${escapeHtml(content)}</pre>`);
+}
+
+function getAgenticProgressSteps() {
+  return [
+    {
+      tag: "Observe",
+      title: "Membaca profil murid",
+      detail: "Menyemak sekolah, kategori risiko, kehadiran dan isu utama."
+    },
+    {
+      tag: "Reason",
+      title: "Menilai keutamaan bantuan",
+      detail: "Memadankan fokus LMS, GPS dan kehadiran dengan tahap tindakan."
+    },
+    {
+      tag: "Plan",
+      title: "Menyusun cadangan intervensi",
+      detail: "Membina pelan tindakan, pihak terlibat dan tempoh semakan."
+    }
+  ];
+}
+
+function renderAgenticProgress(student, activeIndex = 0) {
+  const steps = getAgenticProgressSteps();
+  const progressPct = Math.max(8, Math.min(100, ((activeIndex + 1) / steps.length) * 100));
+  const stepHtml = steps.map((step, index) => {
+    const state = index < activeIndex ? "done" : index === activeIndex ? "active" : "pending";
+    const stateText = state === "done" ? "Selesai" : state === "active" ? "Sedang diproses" : "Menunggu";
+    const marker = state === "done" ? "OK" : index + 1;
+
+    return `
+      <div class="agent-step ${state}">
+        <span class="agent-step-index">${marker}</span>
+        <div>
+          <strong>${escapeHtml(step.tag)}</strong>
+          <p>${escapeHtml(step.title)}</p>
+          <small>${escapeHtml(step.detail)}</small>
+        </div>
+        <em>${escapeHtml(stateText)}</em>
+      </div>
+    `;
+  }).join("");
+
+  setDialogContent("Pembantu intervensi AI", `
+    <div class="agent-processing">
+      <p class="ai-kicker">Agentic Workflow</p>
+      <h4>Menjana cadangan untuk ${escapeHtml(student.name)}</h4>
+      <span>${escapeHtml(student.school)} - ${escapeHtml(getStudentFocusLabel(student))}</span>
+      <div class="agent-progress-bar" aria-hidden="true">
+        <i style="width: ${progressPct}%"></i>
+      </div>
+      <div class="agent-step-list">${stepHtml}</div>
+    </div>
+  `);
 }
 
 function openStudentPlan(index) {
   const student = displayedStudents[index];
   if (!student) return;
-  openSummaryDialog("Cadangan intervensi murid", buildStudentPlanText(student));
+  clearAgenticTimers();
+  renderAgenticProgress(student, 0);
+
+  [1, 2, 3].forEach((stepIndex) => {
+    agenticProgressTimers.push(window.setTimeout(() => {
+      renderAgenticProgress(student, stepIndex);
+    }, stepIndex * 650));
+  });
+
+  agenticProgressTimers.push(window.setTimeout(() => {
+    setDialogContent("Cadangan intervensi murid", buildStudentPlanHtml(student));
+    clearAgenticTimers();
+  }, 2550));
 }
 
 function setCameraStatus(message) {
@@ -2065,6 +2186,7 @@ document.querySelector("#exportBtn").addEventListener("click", () => {
   openSummaryDialog("Ringkasan tindakan daerah", buildSummaryText());
 });
 document.querySelector("#closeDialog").addEventListener("click", () => {
+  clearAgenticTimers();
   document.querySelector("#summaryDialog").close();
 });
 document.querySelector("#studentTable").addEventListener("click", (event) => {
