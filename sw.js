@@ -1,4 +1,4 @@
-const CACHE_NAME = "spm-watch-serian-v24";
+const CACHE_NAME = "spm-watch-serian-v25";
 const APP_ASSETS = [
   "./",
   "./index.html",

@@ -1722,8 +1722,33 @@ td strong {
   background: var(--green);
 }
 
+.intervention-cell {
+  display: grid;
+  gap: 8px;
+  min-width: 190px;
+}
+
+.mini-action {
+  width: fit-content;
+  min-height: 30px;
+  padding: 0 12px;
+  border: 1px solid rgba(36, 213, 206, 0.4);
+  border-radius: 8px;
+  background: rgba(36, 213, 206, 0.1);
+  color: #d9fff9;
+  font: inherit;
+  font-size: 12px;
+  font-weight: 800;
+  cursor: pointer;
+}
+
+.mini-action:hover {
+  border-color: rgba(36, 213, 206, 0.72);
+  background: rgba(36, 213, 206, 0.18);
+}
+
 dialog {
-  width: min(720px, calc(100vw - 32px));
+  width: min(820px, calc(100vw - 32px));
   border: 1px solid var(--line);
   border-radius: 8px;
   background: var(--surface);
@@ -1759,7 +1784,9 @@ pre {
   overflow: auto;
   white-space: pre-wrap;
   color: #dce4ff;
-  font-family: Consolas, Monaco, monospace;
+  font-family: inherit;
+  font-size: 15px;
+  line-height: 1.58;
 }
 
 @media (max-width: 1180px) {

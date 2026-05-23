@@ -1,31 +1,6 @@
-let schools = [
-  { name: "SMK Serian", candidates: 218, pass: 88, attendance: 94, gpa: 4.91, red: 11, amber: 28, subject: "Matematik", gpsQuality: 15, gpsQuantity: 12, lmsNeed: 13, bmNeed: 7, sejarahNeed: 6 },
-  { name: "SMK Taee", candidates: 96, pass: 77, attendance: 89, gpa: 5.42, red: 13, amber: 19, subject: "Sejarah", gpsQuality: 14, gpsQuantity: 11, lmsNeed: 15, bmNeed: 5, sejarahNeed: 12 },
-  { name: "SMK Tebakang", candidates: 104, pass: 82, attendance: 91, gpa: 5.18, red: 8, amber: 17, subject: "Bahasa Melayu", gpsQuality: 10, gpsQuantity: 8, lmsNeed: 9, bmNeed: 8, sejarahNeed: 3 },
-  { name: "SMK Gedong", candidates: 132, pass: 74, attendance: 86, gpa: 5.61, red: 18, amber: 24, subject: "Matematik", gpsQuality: 20, gpsQuantity: 14, lmsNeed: 18, bmNeed: 9, sejarahNeed: 10 },
-  { name: "SMK Balai Ringin", candidates: 156, pass: 79, attendance: 88, gpa: 5.36, red: 15, amber: 26, subject: "Sains", gpsQuality: 17, gpsQuantity: 13, lmsNeed: 15, bmNeed: 8, sejarahNeed: 7 },
-  { name: "SMK Tarat", candidates: 119, pass: 84, attendance: 92, gpa: 5.04, red: 7, amber: 18, subject: "Sejarah", gpsQuality: 9, gpsQuantity: 8, lmsNeed: 7, bmNeed: 3, sejarahNeed: 5 },
-  { name: "SMK Tebedu", candidates: 141, pass: 81, attendance: 90, gpa: 5.22, red: 10, amber: 23, subject: "Bahasa Inggeris", gpsQuality: 12, gpsQuantity: 10, lmsNeed: 10, bmNeed: 4, sejarahNeed: 7 },
-  { name: "SMK Sadong Jaya", candidates: 88, pass: 72, attendance: 84, gpa: 5.83, red: 16, amber: 15, subject: "Bahasa Melayu", gpsQuality: 18, gpsQuantity: 11, lmsNeed: 16, bmNeed: 10, sejarahNeed: 8 },
-  { name: "SMK Siburan", candidates: 176, pass: 86, attendance: 93, gpa: 4.98, red: 9, amber: 22, subject: "Matematik", gpsQuality: 11, gpsQuantity: 9, lmsNeed: 9, bmNeed: 4, sejarahNeed: 6 }
-];
-
-let students = [
-  { name: "Aina L.", school: "SMK Gedong", risk: "red", issue: "Gagal BM dan kehadiran 78%", intervention: "Sesi ibu bapa + mentor akademik" },
-  { name: "Daniel A.", school: "SMK Sadong Jaya", risk: "red", issue: "Tidak capai lulus Sejarah", intervention: "Kelas pemulihan mikro + pemantauan mingguan" },
-  { name: "Rizal J.", school: "SMK Balai Ringin", risk: "red", issue: "Ponteng berselang dan Matematik E", intervention: "Ziarah cakna bersama ketua kaum" },
-  { name: "Nur F.", school: "SMK Taee", risk: "amber", issue: "Markah Sains menurun 12 mata", intervention: "Latih tubi terarah 4 minggu" },
-  { name: "Brandon M.", school: "SMK Tebedu", risk: "amber", issue: "Kehadiran 86% dan BI rendah", intervention: "Sokongan rakan sebaya + latihan lisan" },
-  { name: "Siti R.", school: "SMK Serian", risk: "amber", issue: "GPA sasaran tergelincir", intervention: "Klinik subjek dan semakan target" },
-  { name: "Aaron K.", school: "SMK Tarat", risk: "green", issue: "Perlu kekalkan momentum", intervention: "Set pengayaan SPM" }
-];
-
-let interventions = [
-  { owner: "Sekolah", action: "Analisis item, kelas mikro, mentor mentee, pemantauan kehadiran harian." },
-  { owner: "Ibu bapa", action: "Aku janji belajar, semakan jadual ulang kaji, sokongan kehadiran." },
-  { owner: "Ketua kaum / penghulu", action: "Ziarah komuniti untuk kes kehadiran kritikal dan sokongan keluarga." },
-  { owner: "YB / agensi", action: "Sokongan logistik, ruang belajar komuniti, bantuan peranti atau pengangkutan." }
-];
+let schools = [];
+let students = [];
+let interventions = [];
 
 const riskLabel = {
   red: "Merah",
@@ -53,6 +28,7 @@ let schoolLoadRequest = null;
 let schoolLoadRetryId = null;
 let schoolLoadRetryCount = 0;
 let schoolViewMode = "performance";
+let displayedStudents = [];
 
 const DATA_ENTRY_ALLOWED_EMAILS = new Set(["gunbladeii25@gmail.com"]);
 const REFERENCE_CACHE_VERSION = "v3";
@@ -60,13 +36,13 @@ const SCHOOL_CACHE_TTL_MS = 24 * 60 * 60 * 1000;
 const STUDENT_CACHE_TTL_MS = 6 * 60 * 60 * 1000;
 
 const dataSourceMessages = {
-  local: "Data contoh",
+  local: "Data belum tersedia",
   loginRequired: "Sila masuk",
   syncing: "Mengemas kini",
   empty: "Data belum tersedia",
   live: "Data terkini",
   denied: "Akses tidak dibenarkan",
-  fallback: "Data contoh"
+  fallback: "Data tidak dapat dibaca"
 };
 
 function renderIcons() {
@@ -740,6 +716,9 @@ function parseCsv(text) {
 }
 
 function parseBoolean(value) {
+  if (typeof value === "boolean") return value;
+  if (value === 0) return false;
+  if (value === 1) return true;
   const normalized = String(value || "").trim().toLowerCase();
   if (["true", "1", "ya", "y", "lulus", "pass"].includes(normalized)) return true;
   if (["false", "0", "tidak", "n", "gagal", "fail"].includes(normalized)) return false;
@@ -1049,7 +1028,38 @@ async function saveImportRows() {
   }
 }
 
-function mapSchoolRow(row) {
+async function fetchRowsWithFallback(paths, config) {
+  const errors = [];
+
+  for (const path of paths) {
+    try {
+      const rows = await fetchSupabaseRows(path, config);
+      if (Array.isArray(rows) && rows.length > 0) return rows;
+    } catch (error) {
+      errors.push(error);
+    }
+  }
+
+  if (errors.length === paths.length) {
+    throw errors[errors.length - 1];
+  }
+
+  return [];
+}
+
+function getCachedReferenceSchoolMap() {
+  const cachedSchools = referenceSchools.length
+    ? referenceSchools
+    : (getReferenceCache("schools")?.data || []);
+
+  return new Map(
+    cachedSchools
+      .filter((school) => school?.code && school?.name)
+      .map((school) => [String(school.code).trim().toUpperCase(), getShortSchoolName(school.name)])
+  );
+}
+
+function mapSchoolRow(row, referenceSchoolMap = new Map()) {
   const red = Number(row.red_count || 0);
   const amber = Number(row.amber_count || 0);
   const derivedGpsQuality = Math.round(red * 0.65 + amber * 0.2);
@@ -1057,10 +1067,12 @@ function mapSchoolRow(row) {
   const derivedLmsNeed = Math.max(red, Math.round(red + amber * 0.25));
   const bmNeed = Number(row.bm_need_help ?? Math.round(derivedLmsNeed * 0.55));
   const sejarahNeed = Number(row.sejarah_need_help ?? Math.round(derivedLmsNeed * 0.5));
+  const code = String(row.code || row.school_code || "").trim().toUpperCase();
+  const name = getShortSchoolName(row.name || row.school || referenceSchoolMap.get(code) || code || "Sekolah");
 
   return {
-    code: row.code,
-    name: row.name,
+    code,
+    name,
     candidates: Number(row.candidates || 0),
     pass: Number(row.pass_forecast || 0),
     attendance: Number(row.attendance_avg || 0),
@@ -1076,13 +1088,22 @@ function mapSchoolRow(row) {
   };
 }
 
-function mapStudentRow(row) {
+function mapStudentRow(row, schoolNameByCode = new Map()) {
+  const schoolCode = String(row.school_code || row.schoolCode || "").trim().toUpperCase();
+  const schoolName = getShortSchoolName(row.school_name || row.school || schoolNameByCode.get(schoolCode) || schoolCode || "-");
+
   return {
-    name: row.name,
-    school: row.school,
-    risk: row.risk,
-    issue: row.issue,
-    intervention: row.intervention,
+    id: row.id || row.student_code || `${row.name || "murid"}-${schoolName}`,
+    studentCode: row.student_code || "",
+    name: row.name || row.student_name || row.student_code || "Murid",
+    school: schoolName,
+    schoolCode,
+    risk: normalizeRiskValue(row.risk) || "green",
+    issue: row.issue || "Perlu pemantauan berkala",
+    intervention: row.intervention || "Belum direkod",
+    attendance: parseNumber(row.attendance_rate),
+    bmPass: parseBoolean(row.bm_pass),
+    sejarahPass: parseBoolean(row.sejarah_pass),
     gpsFocus: row.gps_focus || "-",
     lmsFocus: row.lms_focus || ""
   };
@@ -1096,33 +1117,19 @@ function mapInterventionRow(row) {
 }
 
 async function fetchSchoolRows(config) {
-  const fullSelect = "schools?select=code,name,candidates,pass_forecast,attendance_avg,gpa,red_count,amber_count,critical_subject,gps_quality_need,gps_quantity_need,lms_need_help,bm_need_help,sejarah_need_help&order=name.asc";
-  const basicSelect = "schools?select=code,name,candidates,pass_forecast,attendance_avg,gpa,red_count,amber_count,critical_subject&order=name.asc";
-
-  try {
-    return await fetchSupabaseRows(fullSelect, config);
-  } catch (error) {
-    const message = String(error?.message || "");
-    if (!message.includes("gps_quality_need") && !message.includes("lms_need_help") && !message.includes("bm_need_help")) {
-      throw error;
-    }
-    return fetchSupabaseRows(basicSelect, config);
-  }
+  return fetchRowsWithFallback([
+    "dashboard_real_school_metrics?select=code,candidates,pass_forecast,attendance_avg,gpa,red_count,amber_count,critical_subject,gps_quality_need,gps_quantity_need,lms_need_help,bm_need_help,sejarah_need_help&order=code.asc",
+    "schools?select=code,name,candidates,pass_forecast,attendance_avg,gpa,red_count,amber_count,critical_subject,gps_quality_need,gps_quantity_need,lms_need_help,bm_need_help,sejarah_need_help&order=name.asc",
+    "schools?select=code,name,candidates,pass_forecast,attendance_avg,gpa,red_count,amber_count,critical_subject&order=name.asc"
+  ], config);
 }
 
 async function fetchStudentRows(config) {
-  const fullSelect = "dashboard_student_risks?select=name,school,risk,issue,intervention,gps_focus,lms_focus,last_reviewed,updated_at&order=updated_at.desc";
-  const basicSelect = "dashboard_student_risks?select=name,school,risk,issue,intervention,last_reviewed,updated_at&order=updated_at.desc";
-
-  try {
-    return await fetchSupabaseRows(fullSelect, config);
-  } catch (error) {
-    const message = String(error?.message || "");
-    if (!message.includes("gps_focus") && !message.includes("lms_focus")) {
-      throw error;
-    }
-    return fetchSupabaseRows(basicSelect, config);
-  }
+  return fetchRowsWithFallback([
+    "dashboard_real_student_risks?select=id,student_code,school_code,name,school,risk,issue,intervention,attendance_rate,gps_focus,lms_focus,bm_pass,sejarah_pass,last_reviewed,updated_at&order=updated_at.desc",
+    "dashboard_student_risks?select=id,student_code,name,school,risk,issue,intervention,attendance_rate,gps_focus,lms_focus,bm_pass,sejarah_pass,last_reviewed,updated_at&order=updated_at.desc",
+    "dashboard_student_risks?select=name,school,risk,issue,intervention,last_reviewed,updated_at&order=updated_at.desc"
+  ], config);
 }
 
 function clearDashboardData() {
@@ -1154,14 +1161,18 @@ async function loadDashboardData() {
       fetchSupabaseRows("intervention_channels?select=owner,action,sort_order&order=sort_order.asc", config)
     ]);
 
-    if (schoolRows.length === 0) {
+    if (schoolRows.length === 0 && studentRows.length === 0) {
+      clearDashboardData();
       setDataSourceStatus(dataSourceMessages.empty);
       return;
     }
 
-    schools = schoolRows.map(mapSchoolRow);
-    if (studentRows.length > 0) students = studentRows.map(mapStudentRow);
-    if (interventionRows.length > 0) interventions = interventionRows.map(mapInterventionRow);
+    const referenceSchoolMap = getCachedReferenceSchoolMap();
+    schools = schoolRows.map((row) => mapSchoolRow(row, referenceSchoolMap));
+
+    const schoolNameByCode = new Map(schools.map((school) => [school.code, school.name]));
+    students = studentRows.map((row) => mapStudentRow(row, schoolNameByCode));
+    interventions = interventionRows.map(mapInterventionRow);
 
     setDataSourceStatus(dataSourceMessages.live);
   } catch (error) {
@@ -1474,14 +1485,14 @@ function getFilteredData() {
 
   const filteredSchools = schools.filter((school) => {
     const schoolRisk = getSchoolRiskForCurrentView(school);
-    const matchesTerm = school.name.toLowerCase().includes(term);
+    const matchesTerm = String(school.name || "").toLowerCase().includes(term);
     const matchesRisk = risk === "all" || schoolRisk === risk;
     return matchesTerm && matchesRisk;
   });
 
   const filteredStudents = students.filter((student) => {
     const matchesTerm = [student.name, student.school, student.issue].some((value) =>
-      value.toLowerCase().includes(term)
+      String(value || "").toLowerCase().includes(term)
     );
     const matchesRisk = risk === "all" || student.risk === risk;
     return matchesTerm && matchesRisk;
@@ -1701,19 +1712,99 @@ function getStudentFocusLabel(student) {
   return "Pemantauan";
 }
 
+function sortStudentsByPriority(sourceStudents) {
+  return [...sourceStudents].sort((a, b) => {
+    const riskDelta = (riskScore[b.risk] || 0) - (riskScore[a.risk] || 0);
+    if (riskDelta !== 0) return riskDelta;
+    return (a.attendance ?? 100) - (b.attendance ?? 100);
+  });
+}
+
+function getStudentInterventionPlan(student) {
+  const focus = getStudentFocusLabel(student);
+  const steps = ["Sahkan data markah, kehadiran dan isu semasa murid bersama guru kelas sebelum tindakan dimulakan."];
+  const owners = new Set(["Guru kelas", "Guru mata pelajaran"]);
+  const hasAttendanceIssue = student.attendance !== null && student.attendance < 90;
+  const needsLms = focus === "LMS" || student.bmPass === false || student.sejarahPass === false;
+
+  if (needsLms) {
+    const subjectText = student.lmsFocus?.replace(/^Perlu bantuan\s+/i, "") || "Bahasa Melayu dan Sejarah";
+    steps.push(`Tetapkan klinik LMS berfokus ${subjectText} dengan latihan ringkas dan semakan kemajuan setiap minggu.`);
+    owners.add("Penyelaras SPM");
+  }
+
+  if (student.gpsFocus === "GPS Kualiti") {
+    steps.push("Kenal pasti dua atau tiga topik paling lemah, kemudian beri latih tubi sasaran berdasarkan item yang kerap gagal.");
+    owners.add("Ketua panitia");
+  }
+
+  if (student.gpsFocus === "GPS Kuantiti") {
+    steps.push("Pastikan murid kekal dalam kumpulan lulus melalui set latihan minimum, semakan tugasan dan bimbingan berkala.");
+    owners.add("Mentor akademik");
+  }
+
+  if (hasAttendanceIssue) {
+    steps.push("Hubungi ibu bapa untuk sahkan punca ketidakhadiran dan tetapkan sokongan harian sehingga kehadiran stabil.");
+    owners.add("Ibu bapa");
+  }
+
+  if (student.risk === "red") {
+    steps.push("Buat semakan status dalam 7 hari dan naikkan kes kepada kaunselor atau komuniti jika murid masih tidak menunjukkan perubahan.");
+    owners.add("Kaunselor");
+  } else if (student.risk === "amber") {
+    steps.push("Pantau semula dalam 14 hari; kekalkan tindakan jika ada peningkatan dan ubah kaedah jika data masih mendatar.");
+  } else {
+    steps.push("Kekalkan pengukuhan dan beri tugasan pemantapan supaya momentum murid tidak menurun.");
+  }
+
+  return {
+    priority: student.risk === "red" ? "Tindakan segera" : student.risk === "amber" ? "Pemantauan rapi" : "Pengukuhan",
+    review: student.risk === "red" ? "7 hari" : student.risk === "amber" ? "14 hari" : "30 hari",
+    ownerText: [...owners].join(", "),
+    steps
+  };
+}
+
+function buildStudentPlanText(student) {
+  const plan = getStudentInterventionPlan(student);
+  const attendanceText = student.attendance === null ? "Belum direkod" : `${student.attendance}%`;
+
+  return [
+    "CADANGAN INTERVENSI MURID",
+    "",
+    `Murid: ${student.name}`,
+    `Sekolah: ${student.school}`,
+    `Risiko: ${riskLabel[student.risk] || student.risk}`,
+    `Fokus: ${getStudentFocusLabel(student)}`,
+    `Kehadiran: ${attendanceText}`,
+    `Isu utama: ${student.issue}`,
+    "",
+    `Keutamaan: ${plan.priority}`,
+    `Pihak terlibat: ${plan.ownerText}`,
+    `Semakan semula: ${plan.review}`,
+    "",
+    "Pelan tindakan:",
+    ...plan.steps.map((step, index) => `${index + 1}. ${step}`)
+  ].join("\n");
+}
+
 function renderStudents(filteredStudents) {
-  const sorted = [...filteredStudents].sort((a, b) => riskScore[b.risk] - riskScore[a.risk]);
+  const sorted = sortStudentsByPriority(filteredStudents);
+  displayedStudents = sorted;
   document.querySelector("#studentTable").innerHTML = sorted.length
     ? sorted
     .map(
-      (student) => `
+      (student, index) => `
         <tr>
-          <td><strong>${student.name}</strong></td>
-          <td>${student.school}</td>
-          <td><span class="risk-pill ${student.risk}">${riskLabel[student.risk]}</span></td>
-          <td>${getStudentFocusLabel(student)}</td>
-          <td>${student.issue}</td>
-          <td>${student.intervention}</td>
+          <td><strong>${escapeHtml(student.name)}</strong></td>
+          <td>${escapeHtml(student.school)}</td>
+          <td><span class="risk-pill ${student.risk}">${escapeHtml(riskLabel[student.risk] || student.risk)}</span></td>
+          <td>${escapeHtml(getStudentFocusLabel(student))}</td>
+          <td>${escapeHtml(student.issue)}</td>
+          <td class="intervention-cell">
+            <span>${escapeHtml(student.intervention)}</span>
+            <button class="mini-action student-plan-btn" type="button" data-student-index="${index}">Cadangan</button>
+          </td>
         </tr>
       `
     )
@@ -1749,22 +1840,58 @@ function renderAll() {
 }
 
 function buildSummaryText() {
+  const { filteredStudents } = getFilteredData();
+  const sourceStudents = filteredStudents;
+  const sortedStudents = sortStudentsByPriority(sourceStudents);
   const redSchools = schools.filter((school) => getSchoolRisk(school) === "red");
-  const redStudents = students.filter((student) => student.risk === "red");
+  const redStudents = sortedStudents.filter((student) => student.risk === "red");
+  const amberStudents = sortedStudents.filter((student) => student.risk === "amber");
+  const topPlans = sortedStudents.slice(0, 6).map((student, index) => {
+    const plan = getStudentInterventionPlan(student);
+    return `${index + 1}. ${student.name} (${student.school}) - ${plan.priority}: ${plan.steps[1] || plan.steps[0]}`;
+  });
+
+  if (!sortedStudents.length) {
+    return [
+      "RINGKASAN TINDAKAN DAERAH SERIAN",
+      "",
+      "Tiada rekod murid berisiko untuk dijana pada paparan semasa.",
+      "Sila pastikan data sekolah telah dimuat naik dan berjaya disimpan."
+    ].join("\n");
+  }
 
   return [
     "RINGKASAN TINDAKAN DAERAH SERIAN",
     "",
-    `Sekolah memerlukan tindakan segera: ${redSchools.map((school) => school.name).join(", ")}`,
-    `Contoh murid yang memerlukan tindakan segera: ${redStudents.map((student) => student.name).join(", ")}`,
+    `Jumlah murid dalam senarai tindakan: ${sortedStudents.length}`,
+    `Kategori Merah: ${redStudents.length}`,
+    `Kategori Kuning: ${amberStudents.length}`,
+    `Sekolah memerlukan tindakan segera: ${redSchools.length ? redSchools.map((school) => school.name).join(", ") : "Tiada pada paparan semasa"}`,
+    `Murid tindakan segera: ${redStudents.length ? redStudents.map((student) => student.name).join(", ") : "Tiada pada paparan semasa"}`,
     "",
     "Keutamaan 7 hari:",
     "1. Sahkan data kehadiran dan markah terkini setiap sekolah.",
     "2. Laksana kelas bimbingan berfokus Bahasa Melayu, Sejarah dan Matematik untuk murid kategori Merah.",
     "3. Atur libat urus ibu bapa bagi murid ponteng atau gagal subjek teras.",
     "4. Rujuk kes kehadiran kritikal kepada ketua kaum/penghulu untuk ziarah komuniti.",
-    "5. Bentang status kepada PPD dan pemegang taruh untuk sokongan logistik."
+    "5. Bentang status kepada PPD dan pemegang taruh untuk sokongan logistik.",
+    "",
+    "Cadangan intervensi murid utama:",
+    ...topPlans
   ].join("\n");
+}
+
+function openSummaryDialog(title, content) {
+  const dialog = document.querySelector("#summaryDialog");
+  document.querySelector("#summaryDialogTitle").textContent = title;
+  document.querySelector("#summaryText").textContent = content;
+  dialog.showModal();
+}
+
+function openStudentPlan(index) {
+  const student = displayedStudents[index];
+  if (!student) return;
+  openSummaryDialog("Cadangan intervensi murid", buildStudentPlanText(student));
 }
 
 function setCameraStatus(message) {
@@ -1935,11 +2062,15 @@ document.querySelectorAll("#schoolViewTabs button").forEach((button) => {
 });
 window.addEventListener("hashchange", syncRouteUi);
 document.querySelector("#exportBtn").addEventListener("click", () => {
-  document.querySelector("#summaryText").textContent = buildSummaryText();
-  document.querySelector("#summaryDialog").showModal();
+  openSummaryDialog("Ringkasan tindakan daerah", buildSummaryText());
 });
 document.querySelector("#closeDialog").addEventListener("click", () => {
   document.querySelector("#summaryDialog").close();
+});
+document.querySelector("#studentTable").addEventListener("click", (event) => {
+  const button = event.target.closest(".student-plan-btn");
+  if (!button) return;
+  openStudentPlan(Number(button.dataset.studentIndex));
 });
 document.querySelector("#cameraCheckBtn").addEventListener("click", checkCameraSupport);
 document.querySelector("#cameraStartBtn").addEventListener("click", startCamera);
