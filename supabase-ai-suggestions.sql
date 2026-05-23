@@ -37,7 +37,19 @@ create policy "school read ai suggestions"
   to authenticated
   using (
     school_code is null
-    or public.can_access_school(school_code)
+    or exists (
+      select 1
+      from public.app_user_access aur
+      where aur.active = true
+        and (
+          aur.user_id = auth.uid()
+          or lower(aur.email) = lower(coalesce(auth.jwt() ->> 'email', ''))
+        )
+        and (
+          aur.role::text = 'ppd_admin'
+          or aur.school_code = student_ai_suggestions.school_code
+        )
+    )
   );
 
 create policy "school create ai suggestions"
@@ -45,24 +57,56 @@ create policy "school create ai suggestions"
   to authenticated
   with check (
     school_code is null
-    or public.can_access_school(school_code)
+    or exists (
+      select 1
+      from public.app_user_access aur
+      where aur.active = true
+        and (
+          aur.user_id = auth.uid()
+          or lower(aur.email) = lower(coalesce(auth.jwt() ->> 'email', ''))
+        )
+        and (
+          aur.role::text = 'ppd_admin'
+          or aur.school_code = student_ai_suggestions.school_code
+        )
+    )
   );
 
 create policy "school update ai suggestions"
   on public.student_ai_suggestions for update
   to authenticated
   using (
-    public.current_app_role()::text in ('ppd_admin', 'school_admin', 'class_teacher', 'counsellor')
-    and (
-      school_code is null
-      or public.can_access_school(school_code)
+    exists (
+      select 1
+      from public.app_user_access aur
+      where aur.active = true
+        and (
+          aur.user_id = auth.uid()
+          or lower(aur.email) = lower(coalesce(auth.jwt() ->> 'email', ''))
+        )
+        and aur.role::text in ('ppd_admin', 'school_admin', 'class_teacher', 'counsellor')
+        and (
+          student_ai_suggestions.school_code is null
+          or aur.role::text = 'ppd_admin'
+          or aur.school_code = student_ai_suggestions.school_code
+        )
     )
   )
   with check (
-    public.current_app_role()::text in ('ppd_admin', 'school_admin', 'class_teacher', 'counsellor')
-    and (
-      school_code is null
-      or public.can_access_school(school_code)
+    exists (
+      select 1
+      from public.app_user_access aur
+      where aur.active = true
+        and (
+          aur.user_id = auth.uid()
+          or lower(aur.email) = lower(coalesce(auth.jwt() ->> 'email', ''))
+        )
+        and aur.role::text in ('ppd_admin', 'school_admin', 'class_teacher', 'counsellor')
+        and (
+          student_ai_suggestions.school_code is null
+          or aur.role::text = 'ppd_admin'
+          or aur.school_code = student_ai_suggestions.school_code
+        )
     )
   );
 
