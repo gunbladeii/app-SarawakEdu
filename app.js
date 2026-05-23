@@ -1,6 +1,7 @@
 let schools = [];
 let students = [];
 let interventions = [];
+let interventionNetwork = [];
 
 const riskLabel = {
   red: "Merah",
@@ -1118,6 +1119,19 @@ function mapInterventionRow(row) {
   };
 }
 
+function mapInterventionNetworkRow(row) {
+  return {
+    key: row.stakeholder_type || row.key || "school",
+    owner: row.owner_label || row.owner || "Sekolah",
+    action: row.action_summary || row.action || "Tindakan intervensi murid",
+    total: Number(row.total_tasks || row.total || 0),
+    pending: Number(row.pending_tasks || row.pending || 0),
+    active: Number(row.active_tasks || row.active || 0),
+    done: Number(row.done_tasks || row.done || 0),
+    urgent: Number(row.urgent_tasks || row.urgent || 0)
+  };
+}
+
 async function fetchSchoolRows(config) {
   return fetchRowsWithFallback([
     "dashboard_real_school_metrics?select=code,candidates,pass_forecast,attendance_avg,gpa,red_count,amber_count,critical_subject,gps_quality_need,gps_quantity_need,lms_need_help,bm_need_help,sejarah_need_help&order=code.asc",
@@ -1134,10 +1148,17 @@ async function fetchStudentRows(config) {
   ], config);
 }
 
+async function fetchInterventionNetworkRows(config) {
+  return fetchRowsWithFallback([
+    "dashboard_intervention_network_summary?select=stakeholder_type,owner_label,action_summary,total_tasks,pending_tasks,active_tasks,done_tasks,urgent_tasks&order=sort_order.asc"
+  ], config);
+}
+
 function clearDashboardData() {
   schools = [];
   students = [];
   interventions = [];
+  interventionNetwork = [];
 }
 
 async function loadDashboardData() {
@@ -1157,10 +1178,11 @@ async function loadDashboardData() {
   setDataSourceStatus(dataSourceMessages.syncing);
 
   try {
-    const [schoolRows, studentRows, interventionRows] = await Promise.all([
+    const [schoolRows, studentRows, interventionRows, networkRows] = await Promise.all([
       fetchSchoolRows(config),
       fetchStudentRows(config),
-      fetchSupabaseRows("intervention_channels?select=owner,action,sort_order&order=sort_order.asc", config)
+      fetchSupabaseRows("intervention_channels?select=owner,action,sort_order&order=sort_order.asc", config),
+      fetchInterventionNetworkRows(config).catch(() => [])
     ]);
 
     if (schoolRows.length === 0 && studentRows.length === 0) {
@@ -1175,6 +1197,7 @@ async function loadDashboardData() {
     const schoolNameByCode = new Map(schools.map((school) => [school.code, school.name]));
     students = studentRows.map((row) => mapStudentRow(row, schoolNameByCode));
     interventions = interventionRows.map(mapInterventionRow);
+    interventionNetwork = networkRows.map(mapInterventionNetworkRow);
 
     setDataSourceStatus(dataSourceMessages.live);
   } catch (error) {
@@ -1930,20 +1953,167 @@ function renderStudents(filteredStudents) {
     : `<tr><td colspan="6">Tiada data murid risiko untuk dipaparkan.</td></tr>`;
 }
 
+function getNetworkDefinition() {
+  return [
+    {
+      key: "school",
+      icon: "school",
+      owner: "Sekolah",
+      action: "Kelas mikro, mentor akademik, semakan markah dan pemantauan kehadiran harian."
+    },
+    {
+      key: "parent",
+      icon: "users-round",
+      owner: "Ibu bapa",
+      action: "Sokongan kehadiran, jadual ulang kaji di rumah dan komunikasi berkala dengan sekolah."
+    },
+    {
+      key: "community",
+      icon: "map-pin",
+      owner: "Ketua kaum / penghulu",
+      action: "Ziarah cakna bagi kes kehadiran kritikal, sokongan keluarga dan pemantauan komuniti."
+    },
+    {
+      key: "representative",
+      icon: "landmark",
+      owner: "YB / agensi",
+      action: "Sokongan logistik, ruang belajar komuniti, bantuan peranti atau pengangkutan."
+    }
+  ];
+}
+
+function shouldRouteStudentToStakeholder(student, stakeholderKey) {
+  const focus = getStudentFocusLabel(student);
+  const issue = `${student.issue || ""} ${student.intervention || ""}`.toLowerCase();
+  const attendance = student.attendance ?? 100;
+
+  if (stakeholderKey === "school") return true;
+  if (stakeholderKey === "parent") return student.risk !== "green" || attendance < 90;
+  if (stakeholderKey === "community") return attendance < 88 || issue.includes("ponteng") || issue.includes("kehadiran");
+  if (stakeholderKey === "representative") return student.risk === "red" && (focus === "LMS" || attendance < 85);
+  return false;
+}
+
+function getNetworkTasks(stakeholderKey, limit = null) {
+  const sorted = sortStudentsByPriority(students).filter((student) => shouldRouteStudentToStakeholder(student, stakeholderKey));
+  const taskRows = sorted.map((student) => {
+    const plan = getStudentInterventionPlan(student);
+    const primaryStep = plan.steps[1] || plan.steps[0];
+    return {
+      student,
+      title: primaryStep,
+      priority: plan.priority,
+      status: student.risk === "red" ? "Perlu tindakan" : student.risk === "amber" ? "Pantau rapat" : "Pengukuhan",
+      review: plan.review
+    };
+  });
+
+  return limit ? taskRows.slice(0, limit) : taskRows;
+}
+
+function getNetworkSummaryFromStudents() {
+  return getNetworkDefinition().map((item) => {
+    const tasks = getNetworkTasks(item.key);
+    return {
+      ...item,
+      total: tasks.length,
+      pending: tasks.filter((task) => task.student.risk === "red").length,
+      active: tasks.filter((task) => task.student.risk === "amber").length,
+      done: tasks.filter((task) => task.student.risk === "green").length,
+      urgent: tasks.filter((task) => task.student.risk === "red").length
+    };
+  });
+}
+
+function getInterventionNetworkItems() {
+  const definitions = new Map(getNetworkDefinition().map((item) => [item.key, item]));
+  const rows = interventionNetwork.length ? interventionNetwork : getNetworkSummaryFromStudents();
+  return rows.map((row) => ({
+    ...(definitions.get(row.key) || {}),
+    ...row,
+    icon: row.icon || definitions.get(row.key)?.icon || "handshake",
+    owner: row.owner || definitions.get(row.key)?.owner || "Pihak berkepentingan",
+    action: row.action || definitions.get(row.key)?.action || "Tindakan intervensi murid"
+  }));
+}
+
 function renderInterventions() {
-  const icons = ["school", "users-round", "map-pin", "landmark"];
-  document.querySelector("#interventionStack").innerHTML = interventions.length
-    ? interventions
+  const items = getInterventionNetworkItems();
+  document.querySelector("#interventionStack").innerHTML = items.length
+    ? items
     .map(
-      (item, index) => `
-        <div class="intervention-item">
-          <span class="item-icon" data-lucide="${icons[index] || "handshake"}"></span>
-          <div><strong>${item.owner}</strong><span>${item.action}</span></div>
-        </div>
+      (item) => `
+        <button class="intervention-item interactive" type="button" data-network-key="${escapeHtml(item.key)}">
+          <span class="item-icon" data-lucide="${item.icon}"></span>
+          <div>
+            <strong>${escapeHtml(item.owner)}</strong>
+            <span>${escapeHtml(item.action)}</span>
+            <small>
+              <b>${Number(item.total || 0)}</b> tugasan
+              <b>${Number(item.pending || 0)}</b> perlu tindakan
+              <b>${Number(item.active || 0)}</b> dipantau
+            </small>
+          </div>
+        </button>
       `
     )
     .join("")
     : `<div class="empty-state">Tiada saluran intervensi untuk dipaparkan.</div>`;
+}
+
+function buildNetworkDialogHtml(item) {
+  const tasks = getNetworkTasks(item.key, 8);
+  const taskHtml = tasks.length
+    ? tasks.map((task) => `
+        <article class="network-task-card ${task.student.risk}">
+          <div>
+            <strong>${escapeHtml(task.student.name)}</strong>
+            <span>${escapeHtml(task.student.school)} - ${escapeHtml(getStudentFocusLabel(task.student))}</span>
+          </div>
+          <p>${escapeHtml(task.title)}</p>
+          <div class="network-task-meta">
+            <span class="risk-pill ${task.student.risk}">${escapeHtml(riskLabel[task.student.risk] || task.student.risk)}</span>
+            <span>${escapeHtml(task.status)}</span>
+            <span>Semakan ${escapeHtml(task.review)}</span>
+          </div>
+        </article>
+      `).join("")
+    : `<div class="empty-state">Tiada tugasan murid untuk kategori ini pada paparan semasa.</div>`;
+
+  return `
+    <div class="network-dialog">
+      <div class="network-dialog-hero">
+        <span class="item-icon" data-lucide="${item.icon}"></span>
+        <div>
+          <p class="ai-kicker">Jaringan Intervensi</p>
+          <h4>${escapeHtml(item.owner)}</h4>
+          <span>${escapeHtml(item.action)}</span>
+        </div>
+      </div>
+      <div class="network-stat-grid">
+        <div><span>Jumlah tugasan</span><strong>${Number(item.total || 0)}</strong></div>
+        <div><span>Perlu tindakan</span><strong>${Number(item.pending || 0)}</strong></div>
+        <div><span>Sedang dipantau</span><strong>${Number(item.active || 0)}</strong></div>
+        <div><span>Selesai</span><strong>${Number(item.done || 0)}</strong></div>
+      </div>
+      <div class="ai-section">
+        <span class="ai-section-label">Senarai Tugasan Berkaitan</span>
+        <div class="network-task-list">${taskHtml}</div>
+      </div>
+      <div class="ai-section">
+        <span class="ai-section-label">Mekanisme Tindakan</span>
+        <p>Fasa ini memaparkan tugasan intervensi mengikut pihak berkepentingan. Fasa berikutnya membolehkan PPD atau sekolah mengesahkan tugasan, berkongsi pautan terhad dan merekod kemas kini tindakan.</p>
+      </div>
+    </div>
+  `;
+}
+
+function openNetworkDialog(networkKey) {
+  const item = getInterventionNetworkItems().find((entry) => entry.key === networkKey);
+  if (!item) return;
+
+  setDialogContent(`Tugasan ${item.owner}`, buildNetworkDialogHtml(item));
+  renderIcons();
 }
 
 function renderAll() {
@@ -2337,6 +2507,11 @@ document.querySelector("#studentTable").addEventListener("click", (event) => {
   const button = event.target.closest(".student-plan-btn");
   if (!button) return;
   openStudentPlan(Number(button.dataset.studentIndex));
+});
+document.querySelector("#interventionStack").addEventListener("click", (event) => {
+  const button = event.target.closest("[data-network-key]");
+  if (!button) return;
+  openNetworkDialog(button.dataset.networkKey);
 });
 document.querySelector("#cameraCheckBtn").addEventListener("click", checkCameraSupport);
 document.querySelector("#cameraStartBtn").addEventListener("click", startCamera);
