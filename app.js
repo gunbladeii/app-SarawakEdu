@@ -2,6 +2,7 @@ let schools = [];
 let students = [];
 let interventions = [];
 let interventionNetwork = [];
+let interventionNetworkTasks = [];
 
 const riskLabel = {
   red: "Merah",
@@ -1132,6 +1133,56 @@ function mapInterventionNetworkRow(row) {
   };
 }
 
+function mapInterventionNetworkTaskRow(row) {
+  const risk = normalizeRiskValue(row.risk) || "green";
+  const studentName = row.student_name || row.student_code || "Murid";
+  const schoolName = getShortSchoolName(row.school || row.school_name || row.school_code || "Sekolah");
+  const focusArea = row.focus_area || "Pemantauan";
+
+  return {
+    id: row.id || `${row.stakeholder_type || "school"}-${row.student_code || studentName}`,
+    stakeholderKey: row.stakeholder_type || "school",
+    title: row.task_title || "Tindakan intervensi murid",
+    detail: row.task_detail || "",
+    status: mapStakeholderTaskStatus(row.status),
+    review: row.due_date ? formatShortDate(row.due_date) : "ikut jadual",
+    source: "db",
+    student: {
+      id: row.student_code || row.id || studentName,
+      studentCode: row.student_code || "",
+      name: studentName,
+      school: schoolName,
+      schoolCode: row.school_code || "",
+      risk,
+      issue: row.task_detail || row.task_title || "Perlu tindakan intervensi",
+      intervention: row.task_title || "Tindakan intervensi murid",
+      attendance: row.attendance_rate == null ? null : Number(row.attendance_rate),
+      gpsFocus: focusArea.startsWith("GPS") ? focusArea : "-",
+      lmsFocus: focusArea === "LMS" ? "Perlu bantuan LMS" : "",
+      bmPass: null,
+      sejarahPass: null,
+      lastReview: row.updated_at || row.created_at || ""
+    }
+  };
+}
+
+function mapStakeholderTaskStatus(status) {
+  const labels = {
+    pending: "Perlu tindakan",
+    accepted: "Diterima",
+    in_progress: "Sedang dipantau",
+    done: "Selesai"
+  };
+  return labels[status] || "Perlu tindakan";
+}
+
+function formatShortDate(value) {
+  if (!value) return "ikut jadual";
+  const date = new Date(value);
+  if (Number.isNaN(date.getTime())) return value;
+  return date.toLocaleDateString("ms-MY", { day: "2-digit", month: "short" });
+}
+
 async function fetchSchoolRows(config) {
   return fetchRowsWithFallback([
     "dashboard_real_school_metrics?select=code,candidates,pass_forecast,attendance_avg,gpa,red_count,amber_count,critical_subject,gps_quality_need,gps_quantity_need,lms_need_help,bm_need_help,sejarah_need_help&order=code.asc",
@@ -1154,11 +1205,18 @@ async function fetchInterventionNetworkRows(config) {
   ], config);
 }
 
+async function fetchInterventionNetworkTaskRows(config) {
+  return fetchRowsWithFallback([
+    "dashboard_intervention_network_tasks?select=id,cycle_id,cycle_code,school_code,student_code,student_name,stakeholder_type,owner_label,task_title,task_detail,risk,focus_area,status,due_date,created_at,updated_at&order=updated_at.desc"
+  ], config);
+}
+
 function clearDashboardData() {
   schools = [];
   students = [];
   interventions = [];
   interventionNetwork = [];
+  interventionNetworkTasks = [];
 }
 
 async function loadDashboardData() {
@@ -1178,11 +1236,12 @@ async function loadDashboardData() {
   setDataSourceStatus(dataSourceMessages.syncing);
 
   try {
-    const [schoolRows, studentRows, interventionRows, networkRows] = await Promise.all([
+    const [schoolRows, studentRows, interventionRows, networkRows, networkTaskRows] = await Promise.all([
       fetchSchoolRows(config),
       fetchStudentRows(config),
       fetchSupabaseRows("intervention_channels?select=owner,action,sort_order&order=sort_order.asc", config),
-      fetchInterventionNetworkRows(config).catch(() => [])
+      fetchInterventionNetworkRows(config).catch(() => []),
+      fetchInterventionNetworkTaskRows(config).catch(() => [])
     ]);
 
     if (schoolRows.length === 0 && studentRows.length === 0) {
@@ -1198,6 +1257,7 @@ async function loadDashboardData() {
     students = studentRows.map((row) => mapStudentRow(row, schoolNameByCode));
     interventions = interventionRows.map(mapInterventionRow);
     interventionNetwork = networkRows.map(mapInterventionNetworkRow);
+    interventionNetworkTasks = networkTaskRows.map(mapInterventionNetworkTaskRow);
 
     setDataSourceStatus(dataSourceMessages.live);
   } catch (error) {
@@ -1995,6 +2055,11 @@ function shouldRouteStudentToStakeholder(student, stakeholderKey) {
 }
 
 function getNetworkTasks(stakeholderKey, limit = null) {
+  const savedTasks = interventionNetworkTasks.filter((task) => task.stakeholderKey === stakeholderKey);
+  if (savedTasks.length) {
+    return limit ? savedTasks.slice(0, limit) : savedTasks;
+  }
+
   const sorted = sortStudentsByPriority(students).filter((student) => shouldRouteStudentToStakeholder(student, stakeholderKey));
   const taskRows = sorted.map((student) => {
     const plan = getStudentInterventionPlan(student);
@@ -2070,7 +2135,7 @@ function buildNetworkDialogHtml(item) {
             <strong>${escapeHtml(task.student.name)}</strong>
             <span>${escapeHtml(task.student.school)} - ${escapeHtml(getStudentFocusLabel(task.student))}</span>
           </div>
-          <p>${escapeHtml(task.title)}</p>
+          <p>${escapeHtml(task.detail || task.title)}</p>
           <div class="network-task-meta">
             <span class="risk-pill ${task.student.risk}">${escapeHtml(riskLabel[task.student.risk] || task.student.risk)}</span>
             <span>${escapeHtml(task.status)}</span>
