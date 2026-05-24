@@ -8,7 +8,7 @@
     <title>MySPMCare Serian</title>
     <link rel="manifest" href="manifest.webmanifest">
     <link rel="icon" href="icon.svg" type="image/svg+xml">
-    <link rel="stylesheet" href="styles.css?v=18">
+    <link rel="stylesheet" href="styles.css?v=19">
   </head>
   <body>
     <div class="app-shell">
@@ -176,22 +176,22 @@
         </section>
 
         <section id="ringkasan" class="summary-grid dashboard-panel" aria-label="Ringkasan daerah">
-          <article class="metric">
+          <article class="metric detail-trigger" role="button" tabindex="0" data-detail-card="candidates" aria-label="Lihat senarai calon SPM mengikut sekolah">
             <div class="metric-top"><span class="metric-icon" data-lucide="users"></span><span>Calon SPM</span></div>
             <strong id="totalCandidates">0</strong>
             <small>9 sekolah menengah</small>
           </article>
-          <article class="metric">
+          <article class="metric detail-trigger" role="button" tabindex="0" data-detail-card="gps" aria-label="Lihat senarai bantuan GPS">
             <div class="metric-top"><span class="metric-icon" data-lucide="siren"></span><span>Bantuan GPS</span></div>
             <strong id="redCount">0</strong>
             <small id="gpsNeedBreakdown">Perlu intervensi segera</small>
           </article>
-          <article class="metric">
+          <article class="metric detail-trigger" role="button" tabindex="0" data-detail-card="lms" aria-label="Lihat senarai bantuan LMS">
             <div class="metric-top"><span class="metric-icon" data-lucide="trending-up"></span><span>Bantuan LMS</span></div>
             <strong id="passForecast">0%</strong>
             <small id="lmsNeedBreakdown">Berdasarkan trend semasa</small>
           </article>
-          <article class="metric">
+          <article class="metric detail-trigger" role="button" tabindex="0" data-detail-card="lms-ready" aria-label="Lihat status LMS sedia mengikut sekolah">
             <div class="metric-top"><span class="metric-icon" data-lucide="calendar-check"></span><span>LMS Sedia</span></div>
             <strong id="attendanceAvg">0%</strong>
             <small id="lmsReadyNote">Purata 30 hari</small>
@@ -199,7 +199,7 @@
         </section>
 
         <section id="carta" class="chart-grid dashboard-panel" aria-labelledby="chart-title">
-          <section class="panel wide" aria-labelledby="chart-title">
+          <section class="panel wide detail-trigger" role="button" tabindex="0" data-detail-card="performance" aria-labelledby="chart-title">
             <div class="panel-head">
               <div>
                 <p class="eyebrow">Ringkasan daerah</p>
@@ -210,7 +210,7 @@
             <div id="performanceChart" class="bar-chart"></div>
           </section>
 
-          <section class="panel" aria-labelledby="risk-chart-title">
+          <section class="panel detail-trigger" role="button" tabindex="0" data-detail-card="risk" aria-labelledby="risk-chart-title">
             <div class="panel-head compact">
               <div>
                 <p class="eyebrow">Pecahan risiko</p>
@@ -350,6 +350,6 @@
     <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
     <script src="https://unpkg.com/lucide@latest/dist/umd/lucide.min.js"></script>
     <script src="config.js?v=3"></script>
-    <script src="app.js?v=26"></script>
+    <script src="app.js?v=27"></script>
   </body>
 </html>

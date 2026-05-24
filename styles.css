@@ -908,6 +908,21 @@ body.route-data-entry.auth-locked .data-entry-denied {
   padding: 18px;
 }
 
+.detail-trigger {
+  cursor: pointer;
+  transition: border-color 160ms ease, background 160ms ease, box-shadow 160ms ease, transform 160ms ease;
+}
+
+.detail-trigger:hover,
+.detail-trigger:focus-visible {
+  border-color: rgba(29, 212, 200, 0.5);
+  box-shadow:
+    var(--soft-shadow),
+    0 0 0 3px rgba(29, 212, 200, 0.08);
+  outline: none;
+  transform: translateY(-1px);
+}
+
 .metric::after {
   position: absolute;
   right: -18px;
@@ -1406,6 +1421,13 @@ body.route-data-entry.auth-locked .data-entry-denied {
   background: rgba(255, 255, 255, 0.04);
 }
 
+button.driver-item {
+  width: 100%;
+  color: inherit;
+  font: inherit;
+  text-align: left;
+}
+
 .intervention-item {
   width: 100%;
   color: inherit;
@@ -1639,8 +1661,12 @@ body.route-data-entry.auth-locked .data-entry-denied {
 
 .bar-track {
   position: relative;
+  display: block;
+  width: 100%;
   overflow: hidden;
   height: 15px;
+  padding: 0;
+  border: 0;
   border-radius: 999px;
   background: rgba(220, 230, 255, 0.13);
 }
@@ -1942,6 +1968,57 @@ dialog::backdrop {
   font-family: inherit;
   font-size: 15px;
   line-height: 1.58;
+}
+
+.detail-dialog {
+  display: grid;
+  gap: 16px;
+}
+
+.modal-stat-grid {
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+}
+
+.modal-table-wrap {
+  max-height: min(56dvh, 520px);
+  overflow: auto;
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  background: rgba(13, 16, 31, 0.38);
+}
+
+.modal-table {
+  width: 100%;
+  min-width: 760px;
+  border-collapse: collapse;
+}
+
+.modal-table th,
+.modal-table td {
+  padding: 12px;
+  border-bottom: 1px solid rgba(255, 255, 255, 0.08);
+  color: #dce4ff;
+  text-align: left;
+  vertical-align: top;
+}
+
+.modal-table th {
+  position: sticky;
+  top: 0;
+  z-index: 1;
+  background: rgba(25, 28, 51, 0.96);
+  color: var(--muted);
+  font-family: var(--title-font);
+  font-size: 12px;
+  text-transform: uppercase;
+}
+
+.modal-table strong {
+  color: #ffffff;
+}
+
+.modal-table small {
+  color: var(--muted);
 }
 
 .ai-kicker {

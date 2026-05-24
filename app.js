@@ -1628,9 +1628,9 @@ function renderCharts(filteredSchools) {
       (school) => `
         <div class="bar-row">
           <span title="${school.name}">${school.name}</span>
-          <div class="bar-track" aria-label="${school.name} ramalan lulus ${school.pass}%">
+          <button class="bar-track detail-trigger" type="button" data-detail-school="${escapeHtml(school.code)}" aria-label="Lihat perincian ${escapeHtml(school.name)}">
             <span class="bar-fill" style="--bar-value: ${Math.min(school.pass, 100)}%"></span>
-          </div>
+          </button>
           <strong>${school.pass}%</strong>
         </div>
       `
@@ -1667,7 +1667,7 @@ function renderSchools(filteredSchools) {
         const attentionCount = getAttendanceAttentionCount(school);
         const stableCount = Math.max(Number(school.candidates || 0) - attentionCount, 0);
         return `
-          <article class="school-card attendance-view ${risk}">
+          <article class="school-card detail-trigger attendance-view ${risk}" role="button" tabindex="0" data-detail-school="${escapeHtml(school.code)}">
             <div>
               <div class="traffic ${risk}" aria-label="Risiko ${riskLabel[risk]}">
                 <span class="red"></span>
@@ -1697,7 +1697,7 @@ function renderSchools(filteredSchools) {
       if (schoolViewMode === "subjects") {
         const mainSubject = school.subject && school.subject !== "-" ? school.subject : "Belum dikenal pasti";
         return `
-          <article class="school-card subject-view ${risk}">
+          <article class="school-card detail-trigger subject-view ${risk}" role="button" tabindex="0" data-detail-school="${escapeHtml(school.code)}">
             <div>
               <div class="traffic ${risk}" aria-label="Risiko ${riskLabel[risk]}">
                 <span class="red"></span>
@@ -1726,7 +1726,7 @@ function renderSchools(filteredSchools) {
       }
 
       return `
-        <article class="school-card ${risk}">
+        <article class="school-card detail-trigger ${risk}" role="button" tabindex="0" data-detail-school="${escapeHtml(school.code)}">
           <div>
             <div class="traffic ${risk}" aria-label="Risiko ${riskLabel[risk]}">
               <span class="red"></span>
@@ -1758,21 +1758,25 @@ function renderDrivers() {
   const totals = getDistrictSupportTotals();
   const drivers = [
     {
+      key: "candidates",
       icon: "clipboard-check",
       title: "1. Semak kedudukan calon",
       detail: `${totals.candidates.toLocaleString("ms-MY")} calon dipantau mengikut sekolah, kehadiran, prestasi semasa dan kedudukan subjek utama.`
     },
     {
+      key: "gps-quality",
       icon: "book-open",
       title: "2. Bantu GPS Kualiti",
       detail: `${totals.gpsQuality.toLocaleString("ms-MY")} calon perlu bimbingan markah untuk membantu memperbaiki purata gred sekolah.`
     },
     {
+      key: "gps-quantity",
       icon: "trending-down",
       title: "3. Bantu GPS Kuantiti",
       detail: `${totals.gpsQuantity.toLocaleString("ms-MY")} calon perlu dipastikan kekal dalam kumpulan lulus supaya jumlah lulus daerah meningkat.`
     },
     {
+      key: "lms",
       icon: "map-pin",
       title: "4. Pastikan LMS",
       detail: `${totals.lmsNeed.toLocaleString("ms-MY")} calon belum selamat LMS kerana Bahasa Melayu atau Sejarah masih perlu dipulihkan.`
@@ -1782,10 +1786,10 @@ function renderDrivers() {
   document.querySelector("#driverList").innerHTML = drivers
     .map(
       (driver) => `
-        <div class="driver-item">
+        <button class="driver-item detail-trigger" type="button" data-detail-driver="${escapeHtml(driver.key)}">
           <span class="item-icon" data-lucide="${driver.icon}"></span>
           <div><strong>${driver.title}</strong><span>${driver.detail}</span></div>
-        </div>
+        </button>
       `
     )
     .join("");
@@ -2239,6 +2243,169 @@ function clearAgenticTimers() {
   agenticProgressTimers = [];
 }
 
+function getSchoolStudents(school) {
+  return students.filter((student) =>
+    (school.code && student.schoolCode === school.code) || student.school === school.name
+  );
+}
+
+function getStudentsByDetailType(type) {
+  if (type === "gps") return sortStudentsByPriority(students).filter((student) => getStudentFocusLabel(student).startsWith("GPS"));
+  if (type === "gps-quality") return sortStudentsByPriority(students).filter((student) => student.gpsFocus === "GPS Kualiti");
+  if (type === "gps-quantity") return sortStudentsByPriority(students).filter((student) => student.gpsFocus === "GPS Kuantiti");
+  if (type === "lms") return sortStudentsByPriority(students).filter((student) => getStudentFocusLabel(student) === "LMS");
+  if (type === "risk") return sortStudentsByPriority(students).filter((student) => student.risk !== "green");
+  return sortStudentsByPriority(students);
+}
+
+function buildModalTable(headers, rows) {
+  if (!rows.length) return `<div class="empty-state">Tiada item untuk kategori ini pada paparan semasa.</div>`;
+  return `
+    <div class="modal-table-wrap">
+      <table class="modal-table">
+        <thead><tr>${headers.map((header) => `<th>${escapeHtml(header)}</th>`).join("")}</tr></thead>
+        <tbody>${rows.join("")}</tbody>
+      </table>
+    </div>
+  `;
+}
+
+function buildSchoolRows(sourceSchools) {
+  return sourceSchools.map((school) => {
+    const risk = getSchoolRisk(school);
+    const lmsReady = Math.max(Number(school.candidates || 0) - Number(school.lmsNeed || 0), 0);
+    const lmsRate = school.candidates ? Math.round((lmsReady / school.candidates) * 100) : 0;
+    return `
+      <tr>
+        <td><strong>${escapeHtml(school.name)}</strong><br><small>${escapeHtml(school.code || "-")}</small></td>
+        <td>${Number(school.candidates || 0).toLocaleString("ms-MY")}</td>
+        <td>${school.pass}%</td>
+        <td>${school.attendance}%</td>
+        <td><span class="risk-pill ${risk}">${escapeHtml(riskLabel[risk])}</span></td>
+        <td>GPS ${Number((school.gpsQuality || 0) + (school.gpsQuantity || 0)).toLocaleString("ms-MY")}<br><small>LMS ${Number(school.lmsNeed || 0).toLocaleString("ms-MY")} | Sedia ${lmsRate}%</small></td>
+      </tr>
+    `;
+  });
+}
+
+function buildStudentRows(sourceStudents) {
+  return sourceStudents.map((student) => `
+    <tr>
+      <td><strong>${escapeHtml(student.name)}</strong><br><small>${escapeHtml(student.studentCode || "-")}</small></td>
+      <td>${escapeHtml(student.school)}</td>
+      <td><span class="risk-pill ${student.risk}">${escapeHtml(riskLabel[student.risk] || student.risk)}</span></td>
+      <td>${escapeHtml(getStudentFocusLabel(student))}</td>
+      <td>${escapeHtml(student.issue)}</td>
+      <td>${escapeHtml(student.intervention)}</td>
+    </tr>
+  `);
+}
+
+function buildDetailDialogHtml({ title, subtitle, stats = [], tableHtml }) {
+  const statHtml = stats.length
+    ? `<div class="network-stat-grid modal-stat-grid">${stats.map((stat) => `
+        <div><span>${escapeHtml(stat.label)}</span><strong>${escapeHtml(stat.value)}</strong></div>
+      `).join("")}</div>`
+    : "";
+
+  return `
+    <div class="network-dialog detail-dialog">
+      <div class="network-dialog-hero">
+        <span class="item-icon" data-lucide="list-checks"></span>
+        <div>
+          <p class="ai-kicker">Paparan Terperinci</p>
+          <h4>${escapeHtml(title)}</h4>
+          <span>${escapeHtml(subtitle)}</span>
+        </div>
+      </div>
+      ${statHtml}
+      <div class="ai-section">
+        <span class="ai-section-label">Senarai Item</span>
+        ${tableHtml}
+      </div>
+    </div>
+  `;
+}
+
+function openSchoolDetailDialog(schoolCode) {
+  const school = schools.find((item) => item.code === schoolCode) || schools.find((item) => item.name === schoolCode);
+  if (!school) return;
+
+  const schoolStudents = getSchoolStudents(school);
+  const riskStudents = sortStudentsByPriority(schoolStudents).filter((student) => student.risk !== "green");
+  const lmsReady = Math.max(Number(school.candidates || 0) - Number(school.lmsNeed || 0), 0);
+  const tableHtml = buildModalTable(
+    ["Murid", "Risiko", "Fokus", "Isu utama", "Intervensi"],
+    riskStudents.map((student) => `
+      <tr>
+        <td><strong>${escapeHtml(student.name)}</strong><br><small>${escapeHtml(student.studentCode || "-")}</small></td>
+        <td><span class="risk-pill ${student.risk}">${escapeHtml(riskLabel[student.risk] || student.risk)}</span></td>
+        <td>${escapeHtml(getStudentFocusLabel(student))}</td>
+        <td>${escapeHtml(student.issue)}</td>
+        <td>${escapeHtml(student.intervention)}</td>
+      </tr>
+    `)
+  );
+
+  setDialogContent(`Perincian ${school.name}`, buildDetailDialogHtml({
+    title: school.name,
+    subtitle: "Ringkasan sekolah, murid berisiko dan keperluan bantuan.",
+    stats: [
+      { label: "Calon", value: Number(school.candidates || 0).toLocaleString("ms-MY") },
+      { label: "Lulus", value: `${school.pass}%` },
+      { label: "Bantuan GPS", value: Number((school.gpsQuality || 0) + (school.gpsQuantity || 0)).toLocaleString("ms-MY") },
+      { label: "LMS sedia", value: school.candidates ? `${Math.round((lmsReady / school.candidates) * 100)}%` : "0%" }
+    ],
+    tableHtml
+  }));
+  renderIcons();
+}
+
+function openDashboardDetailDialog(type) {
+  const totals = getDistrictSupportTotals();
+  const titles = {
+    candidates: ["Calon SPM", "Senarai calon mengikut sekolah."],
+    gps: ["Bantuan GPS", "Murid dan sekolah yang memerlukan sokongan GPS."],
+    "gps-quality": ["GPS Kualiti", "Murid yang memerlukan bimbingan markah dan penguasaan item."],
+    "gps-quantity": ["GPS Kuantiti", "Murid yang perlu dikekalkan dalam kumpulan lulus."],
+    lms: ["Bantuan LMS", "Murid belum selamat Bahasa Melayu atau Sejarah."],
+    "lms-ready": ["LMS Sedia", "Status calon yang telah berada pada landasan LMS."],
+    performance: ["Prestasi sekolah", "Kedudukan prestasi semua sekolah dalam daerah."],
+    risk: ["Traffic Light murid", "Senarai murid yang memerlukan tindakan mengikut risiko."]
+  };
+  const [title, subtitle] = titles[type] || ["Paparan terperinci", "Senarai item mengikut kategori."];
+
+  let tableHtml = "";
+  let stats = [];
+
+  if (["candidates", "performance", "lms-ready"].includes(type)) {
+    tableHtml = buildModalTable(["Sekolah", "Calon", "Lulus", "Hadir", "Risiko", "Keperluan"], buildSchoolRows(schools));
+    stats = [
+      { label: "Sekolah", value: schools.length.toLocaleString("ms-MY") },
+      { label: "Calon", value: totals.candidates.toLocaleString("ms-MY") },
+      { label: "LMS sedia", value: `${Math.round(totals.lmsReadyRate)}%` },
+      { label: "Bantuan GPS", value: totals.gpsNeed.toLocaleString("ms-MY") }
+    ];
+  } else {
+    const sourceStudents = getStudentsByDetailType(type);
+    tableHtml = buildModalTable(["Murid", "Sekolah", "Risiko", "Fokus", "Isu utama", "Intervensi"], buildStudentRows(sourceStudents));
+    stats = [
+      { label: "Jumlah item", value: sourceStudents.length.toLocaleString("ms-MY") },
+      { label: "Merah", value: sourceStudents.filter((student) => student.risk === "red").length.toLocaleString("ms-MY") },
+      { label: "Kuning", value: sourceStudents.filter((student) => student.risk === "amber").length.toLocaleString("ms-MY") },
+      { label: "Sekolah terlibat", value: new Set(sourceStudents.map((student) => student.school)).size.toLocaleString("ms-MY") }
+    ];
+  }
+
+  setDialogContent(title, buildDetailDialogHtml({ title, subtitle, stats, tableHtml }));
+  renderIcons();
+}
+
+function openDriverDetailDialog(type) {
+  const normalizedType = type === "gps-quality" || type === "gps-quantity" ? type : type;
+  openDashboardDetailDialog(normalizedType);
+}
+
 function setDialogContent(title, html) {
   const dialog = document.querySelector("#summaryDialog");
   document.querySelector("#summaryDialogTitle").textContent = title;
@@ -2562,6 +2729,54 @@ document.querySelectorAll("#schoolViewTabs button").forEach((button) => {
 window.addEventListener("hashchange", syncRouteUi);
 document.querySelector("#exportBtn").addEventListener("click", () => {
   openSummaryDialog("Ringkasan tindakan daerah", buildSummaryText());
+});
+document.querySelector(".summary-grid").addEventListener("click", (event) => {
+  const trigger = event.target.closest("[data-detail-card]");
+  if (!trigger) return;
+  openDashboardDetailDialog(trigger.dataset.detailCard);
+});
+document.querySelector(".summary-grid").addEventListener("keydown", (event) => {
+  if (!["Enter", " "].includes(event.key)) return;
+  const trigger = event.target.closest("[data-detail-card]");
+  if (!trigger) return;
+  event.preventDefault();
+  openDashboardDetailDialog(trigger.dataset.detailCard);
+});
+document.querySelector("#carta").addEventListener("click", (event) => {
+  const schoolTrigger = event.target.closest("[data-detail-school]");
+  if (schoolTrigger) {
+    event.stopPropagation();
+    openSchoolDetailDialog(schoolTrigger.dataset.detailSchool);
+    return;
+  }
+  const trigger = event.target.closest("[data-detail-card]");
+  if (!trigger) return;
+  openDashboardDetailDialog(trigger.dataset.detailCard);
+});
+document.querySelector("#carta").addEventListener("keydown", (event) => {
+  if (!["Enter", " "].includes(event.key)) return;
+  const trigger = event.target.closest("[data-detail-card], [data-detail-school]");
+  if (!trigger) return;
+  event.preventDefault();
+  if (trigger.dataset.detailSchool) openSchoolDetailDialog(trigger.dataset.detailSchool);
+  if (trigger.dataset.detailCard) openDashboardDetailDialog(trigger.dataset.detailCard);
+});
+document.querySelector("#schoolGrid").addEventListener("click", (event) => {
+  const trigger = event.target.closest("[data-detail-school]");
+  if (!trigger) return;
+  openSchoolDetailDialog(trigger.dataset.detailSchool);
+});
+document.querySelector("#schoolGrid").addEventListener("keydown", (event) => {
+  if (!["Enter", " "].includes(event.key)) return;
+  const trigger = event.target.closest("[data-detail-school]");
+  if (!trigger) return;
+  event.preventDefault();
+  openSchoolDetailDialog(trigger.dataset.detailSchool);
+});
+document.querySelector("#driverList").addEventListener("click", (event) => {
+  const trigger = event.target.closest("[data-detail-driver]");
+  if (!trigger) return;
+  openDriverDetailDialog(trigger.dataset.detailDriver);
 });
 document.querySelector("#closeDialog").addEventListener("click", () => {
   agenticRequestId += 1;
