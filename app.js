@@ -2288,6 +2288,107 @@ function buildSchoolRows(sourceSchools) {
   });
 }
 
+function getSchoolRiskTotals(sourceSchools = schools) {
+  return sourceSchools.reduce(
+    (sum, school) => {
+      sum.red += Number(school.red || 0);
+      sum.amber += Number(school.amber || 0);
+      sum.green += Math.max(Number(school.candidates || 0) - Number(school.red || 0) - Number(school.amber || 0), 0);
+      return sum;
+    },
+    { red: 0, amber: 0, green: 0 }
+  );
+}
+
+function getSchoolAverage(sourceSchools, key) {
+  if (!sourceSchools.length) return 0;
+  return Math.round(sourceSchools.reduce((sum, school) => sum + Number(school[key] || 0), 0) / sourceSchools.length);
+}
+
+function buildSupportRows(sourceSchools, type) {
+  return sourceSchools.map((school) => {
+    const gpsQuality = Number(school.gpsQuality || 0);
+    const gpsQuantity = Number(school.gpsQuantity || 0);
+    const gpsTotal = gpsQuality + gpsQuantity;
+    const lmsNeed = Number(school.lmsNeed || 0);
+    const bmNeed = Number(school.bmNeed || 0);
+    const sejarahNeed = Number(school.sejarahNeed || 0);
+    const lmsReady = Math.max(Number(school.candidates || 0) - lmsNeed, 0);
+    const lmsReadyRate = school.candidates ? Math.round((lmsReady / Number(school.candidates)) * 100) : 0;
+
+    const values = {
+      gps: [gpsTotal, `Kualiti ${gpsQuality} | Kuantiti ${gpsQuantity}`, getSchoolRisk(school)],
+      "gps-quality": [gpsQuality, `Jumlah calon yang perlu bimbingan markah dan penguasaan item.`, getSchoolRisk(school)],
+      "gps-quantity": [gpsQuantity, `Jumlah calon yang perlu dikekalkan dalam kumpulan lulus.`, getSchoolRisk(school)],
+      lms: [lmsNeed, `Bahasa Melayu ${bmNeed} | Sejarah ${sejarahNeed}`, getSubjectRisk(school)],
+      "lms-ready": [lmsReady, `${lmsReadyRate}% calon berada pada landasan LMS`, getSubjectRisk(school)]
+    };
+    const [count, note, risk] = values[type] || values.gps;
+
+    return `
+      <tr>
+        <td><strong>${escapeHtml(school.name)}</strong><br><small>${escapeHtml(school.code || "-")}</small></td>
+        <td>${Number(school.candidates || 0).toLocaleString("ms-MY")}</td>
+        <td>${Number(count || 0).toLocaleString("ms-MY")}</td>
+        <td><span class="risk-pill ${risk}">${escapeHtml(riskLabel[risk])}</span></td>
+        <td>${escapeHtml(note)}</td>
+      </tr>
+    `;
+  });
+}
+
+function getSchoolSupportCount(school, type) {
+  if (type === "gps") return Number(school.gpsQuality || 0) + Number(school.gpsQuantity || 0);
+  if (type === "gps-quality") return Number(school.gpsQuality || 0);
+  if (type === "gps-quantity") return Number(school.gpsQuantity || 0);
+  if (type === "lms") return Number(school.lmsNeed || 0);
+  if (type === "lms-ready") return Math.max(Number(school.candidates || 0) - Number(school.lmsNeed || 0), 0);
+  return Number(school.candidates || 0);
+}
+
+function getSupportRisk(school, type) {
+  return type === "lms" || type === "lms-ready" ? getSubjectRisk(school) : getSchoolRisk(school);
+}
+
+function buildRiskRows(sourceSchools) {
+  return sourceSchools.map((school) => {
+    const red = Number(school.red || 0);
+    const amber = Number(school.amber || 0);
+    const green = Math.max(Number(school.candidates || 0) - red - amber, 0);
+    const risk = getSchoolRisk(school);
+    return `
+      <tr>
+        <td><strong>${escapeHtml(school.name)}</strong><br><small>${escapeHtml(school.code || "-")}</small></td>
+        <td>${red.toLocaleString("ms-MY")}</td>
+        <td>${amber.toLocaleString("ms-MY")}</td>
+        <td>${green.toLocaleString("ms-MY")}</td>
+        <td><span class="risk-pill ${risk}">${escapeHtml(riskLabel[risk])}</span></td>
+        <td>Lulus ${school.pass}% | Hadir ${school.attendance}%</td>
+      </tr>
+    `;
+  });
+}
+
+function buildSchoolAggregateRows(school) {
+  const red = Number(school.red || 0);
+  const amber = Number(school.amber || 0);
+  const green = Math.max(Number(school.candidates || 0) - red - amber, 0);
+  return [
+    ["Merah", red, "Tindakan segera"],
+    ["Kuning", amber, "Perlu pemantauan"],
+    ["Hijau", green, "Landasan kukuh"],
+    ["GPS Kualiti", Number(school.gpsQuality || 0), "Bimbingan markah dan penguasaan item"],
+    ["GPS Kuantiti", Number(school.gpsQuantity || 0), "Kekalkan calon dalam kumpulan lulus"],
+    ["Bantuan LMS", Number(school.lmsNeed || 0), `Bahasa Melayu ${Number(school.bmNeed || 0)} | Sejarah ${Number(school.sejarahNeed || 0)}`]
+  ].map(([category, total, note]) => `
+    <tr>
+      <td><strong>${escapeHtml(category)}</strong></td>
+      <td>${Number(total || 0).toLocaleString("ms-MY")}</td>
+      <td>${escapeHtml(note)}</td>
+    </tr>
+  `);
+}
+
 function buildStudentRows(sourceStudents) {
   return sourceStudents.map((student) => `
     <tr>
@@ -2334,18 +2435,20 @@ function openSchoolDetailDialog(schoolCode) {
   const schoolStudents = getSchoolStudents(school);
   const riskStudents = sortStudentsByPriority(schoolStudents).filter((student) => student.risk !== "green");
   const lmsReady = Math.max(Number(school.candidates || 0) - Number(school.lmsNeed || 0), 0);
-  const tableHtml = buildModalTable(
-    ["Murid", "Risiko", "Fokus", "Isu utama", "Intervensi"],
-    riskStudents.map((student) => `
-      <tr>
-        <td><strong>${escapeHtml(student.name)}</strong><br><small>${escapeHtml(student.studentCode || "-")}</small></td>
-        <td><span class="risk-pill ${student.risk}">${escapeHtml(riskLabel[student.risk] || student.risk)}</span></td>
-        <td>${escapeHtml(getStudentFocusLabel(student))}</td>
-        <td>${escapeHtml(student.issue)}</td>
-        <td>${escapeHtml(student.intervention)}</td>
-      </tr>
-    `)
-  );
+  const tableHtml = riskStudents.length
+    ? buildModalTable(
+        ["Murid", "Risiko", "Fokus", "Isu utama", "Intervensi"],
+        riskStudents.map((student) => `
+          <tr>
+            <td><strong>${escapeHtml(student.name)}</strong><br><small>${escapeHtml(student.studentCode || "-")}</small></td>
+            <td><span class="risk-pill ${student.risk}">${escapeHtml(riskLabel[student.risk] || student.risk)}</span></td>
+            <td>${escapeHtml(getStudentFocusLabel(student))}</td>
+            <td>${escapeHtml(student.issue)}</td>
+            <td>${escapeHtml(student.intervention)}</td>
+          </tr>
+        `)
+      )
+    : buildModalTable(["Kategori", "Jumlah", "Catatan"], buildSchoolAggregateRows(school));
 
   setDialogContent(`Perincian ${school.name}`, buildDetailDialogHtml({
     title: school.name,
@@ -2363,27 +2466,51 @@ function openSchoolDetailDialog(schoolCode) {
 
 function openDashboardDetailDialog(type) {
   const totals = getDistrictSupportTotals();
+  const riskTotals = getSchoolRiskTotals();
   const titles = {
     candidates: ["Calon SPM", "Senarai calon mengikut sekolah."],
-    gps: ["Bantuan GPS", "Murid dan sekolah yang memerlukan sokongan GPS."],
-    "gps-quality": ["GPS Kualiti", "Murid yang memerlukan bimbingan markah dan penguasaan item."],
-    "gps-quantity": ["GPS Kuantiti", "Murid yang perlu dikekalkan dalam kumpulan lulus."],
-    lms: ["Bantuan LMS", "Murid belum selamat Bahasa Melayu atau Sejarah."],
-    "lms-ready": ["LMS Sedia", "Status calon yang telah berada pada landasan LMS."],
+    gps: ["Bantuan GPS", "Pecahan calon yang memerlukan bantuan GPS mengikut sekolah."],
+    "gps-quality": ["GPS Kualiti", "Pecahan calon yang memerlukan bimbingan markah mengikut sekolah."],
+    "gps-quantity": ["GPS Kuantiti", "Pecahan calon yang perlu dikekalkan dalam kumpulan lulus mengikut sekolah."],
+    lms: ["Bantuan LMS", "Pecahan calon belum selamat Bahasa Melayu atau Sejarah mengikut sekolah."],
+    "lms-ready": ["LMS Sedia", "Status calon yang telah berada pada landasan LMS mengikut sekolah."],
     performance: ["Prestasi sekolah", "Kedudukan prestasi semua sekolah dalam daerah."],
-    risk: ["Traffic Light murid", "Senarai murid yang memerlukan tindakan mengikut risiko."]
+    risk: ["Traffic Light murid", "Pecahan risiko murid mengikut sekolah."]
   };
   const [title, subtitle] = titles[type] || ["Paparan terperinci", "Senarai item mengikut kategori."];
 
   let tableHtml = "";
   let stats = [];
 
-  if (["candidates", "performance", "lms-ready"].includes(type)) {
+  if (["candidates", "performance"].includes(type)) {
     tableHtml = buildModalTable(["Sekolah", "Calon", "Lulus", "Hadir", "Risiko", "Keperluan"], buildSchoolRows(schools));
     stats = [
       { label: "Sekolah", value: schools.length.toLocaleString("ms-MY") },
       { label: "Calon", value: totals.candidates.toLocaleString("ms-MY") },
-      { label: "LMS sedia", value: `${Math.round(totals.lmsReadyRate)}%` },
+      { label: "Purata lulus", value: `${getSchoolAverage(schools, "pass")}%` },
+      { label: "Purata hadir", value: `${getSchoolAverage(schools, "attendance")}%` }
+    ];
+  } else if (["gps", "gps-quality", "gps-quantity", "lms", "lms-ready"].includes(type)) {
+    const totalByType = {
+      gps: totals.gpsNeed,
+      "gps-quality": totals.gpsQuality,
+      "gps-quantity": totals.gpsQuantity,
+      lms: totals.lmsNeed,
+      "lms-ready": totals.lmsReady
+    };
+    tableHtml = buildModalTable(["Sekolah", "Calon", "Jumlah", "Risiko", "Catatan"], buildSupportRows(schools, type));
+    stats = [
+      { label: type === "lms-ready" ? "Calon sedia" : "Jumlah calon", value: Number(totalByType[type] || 0).toLocaleString("ms-MY") },
+      { label: "Sekolah terlibat", value: schools.filter((school) => getSchoolSupportCount(school, type) > 0).length.toLocaleString("ms-MY") },
+      { label: "Merah", value: schools.filter((school) => getSupportRisk(school, type) === "red").length.toLocaleString("ms-MY") },
+      { label: "Kuning", value: schools.filter((school) => getSupportRisk(school, type) === "amber").length.toLocaleString("ms-MY") }
+    ];
+  } else if (type === "risk") {
+    tableHtml = buildModalTable(["Sekolah", "Merah", "Kuning", "Hijau", "Status", "Catatan"], buildRiskRows(schools));
+    stats = [
+      { label: "Merah", value: riskTotals.red.toLocaleString("ms-MY") },
+      { label: "Kuning", value: riskTotals.amber.toLocaleString("ms-MY") },
+      { label: "Hijau", value: riskTotals.green.toLocaleString("ms-MY") },
       { label: "Bantuan GPS", value: totals.gpsNeed.toLocaleString("ms-MY") }
     ];
   } else {
